@@ -39,6 +39,11 @@ class _AppShellState extends State<AppShell> {
 
   @override
   Widget build(BuildContext context) {
+    final pad = MediaQuery.paddingOf(context);
+    // Read here, above the Scaffold: inside the body the Scaffold has already
+    // consumed the keyboard inset.
+    final keyboardOpen = MediaQuery.viewInsetsOf(context).bottom > 0;
+
     return Scaffold(
       body: AuroraBackground(
         child: Material(
@@ -69,14 +74,72 @@ class _AppShellState extends State<AppShell> {
                       ),
                     ),
                   ),
+                  // Soft fade under the status bar so scrolled content never
+                  // collides with the clock and icons.
+                  Positioned(
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    height: pad.top + 10,
+                    child: IgnorePointer(
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            colors: [
+                              AppColors.background.withAlpha(217),
+                              AppColors.background.withAlpha(0),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  // Matching fade behind the floating dock.
+                  if (!keyboardOpen)
+                    Positioned(
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      height: kDockClearance + pad.bottom,
+                      child: IgnorePointer(
+                        child: DecoratedBox(
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.topCenter,
+                              end: Alignment.bottomCenter,
+                              colors: [
+                                AppColors.background.withAlpha(0),
+                                AppColors.background.withAlpha(190),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
                   Positioned(
                     left: 0,
                     right: 0,
                     bottom: 0,
-                    child: FloatingDock(
-                      items: _items,
-                      index: _index,
-                      onChanged: _go,
+                    // Slides away while the keyboard is open so it never
+                    // rides up over the content being typed into.
+                    child: AnimatedSlide(
+                      duration: const Duration(milliseconds: 220),
+                      curve: Curves.easeOutCubic,
+                      offset: keyboardOpen ? const Offset(0, 1.4) : Offset.zero,
+                      child: AnimatedOpacity(
+                        duration: const Duration(milliseconds: 180),
+                        opacity: keyboardOpen ? 0 : 1,
+                        child: IgnorePointer(
+                          ignoring: keyboardOpen,
+                          child: FloatingDock(
+                            items: _items,
+                            index: _index,
+                            onChanged: _go,
+                          ),
+                        ),
+                      ),
                     ),
                   ),
                 ],

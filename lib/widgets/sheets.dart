@@ -46,6 +46,7 @@ class _SheetFrame extends StatelessWidget {
           ),
           child: SafeArea(
             top: false,
+            minimum: const EdgeInsets.only(bottom: 8),
             child: SingleChildScrollView(
               padding: const EdgeInsets.fromLTRB(22, 10, 22, 22),
               child: Column(
@@ -90,6 +91,7 @@ class _CheckRow extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(14),
+      constraints: const BoxConstraints(minHeight: 72),
       decoration: BoxDecoration(
         color: AppColors.white(0.06),
         borderRadius: BorderRadius.circular(20),
@@ -121,6 +123,8 @@ class _CheckRow extends StatelessWidget {
               ],
             ),
           ),
+          // Fixed gap so long titles can never touch the status icon.
+          const SizedBox(width: 12),
           Icon(
             check.ok ? Icons.check_circle_rounded : Icons.error_rounded,
             color: color,

@@ -25,6 +25,8 @@ class TrendBars extends StatelessWidget {
   Widget build(BuildContext context) {
     final maxV = values.fold<int>(1, math.max);
     final last = values.length - 1;
+    // Room above each bar for its value label (text height + gap).
+    final valueBox = MediaQuery.textScalerOf(context).scale(11) * 1.2 + 4;
     return Row(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -32,34 +34,50 @@ class TrendBars extends StatelessWidget {
           Expanded(
             child: Column(
               children: [
-                Text(
-                  '${values[i]}',
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                    color: i == last ? AppColors.text : AppColors.muted,
-                  ),
-                ),
-                const SizedBox(height: 4),
                 Expanded(
-                  child: Align(
-                    alignment: Alignment.bottomCenter,
-                    child: FractionallySizedBox(
-                      heightFactor: (values[i] / maxV).clamp(0.04, 1.0),
-                      child: Container(
-                        width: 16,
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(8),
-                          gradient: i == last ? AppGradients.aurora : null,
-                          color: i == last ? null : AppColors.white(0.14),
+                  child: LayoutBuilder(
+                    builder: (context, c) {
+                      final room = math.max(0.0, c.maxHeight - valueBox);
+                      final barH = math.max(4.0, room * (values[i] / maxV));
+                      return Align(
+                        alignment: Alignment.bottomCenter,
+                        // The number sits right on top of its own bar.
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              '${values[i]}',
+                              style: TextStyle(
+                                fontSize: 11,
+                                height: 1.2,
+                                fontWeight: FontWeight.w600,
+                                color: i == last
+                                    ? AppColors.text
+                                    : AppColors.muted,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Container(
+                              width: 16,
+                              height: barH,
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(8),
+                                gradient: i == last
+                                    ? AppGradients.aurora
+                                    : null,
+                                color: i == last ? null : AppColors.white(0.14),
+                              ),
+                            ),
+                          ],
                         ),
-                      ),
-                    ),
+                      );
+                    },
                   ),
                 ),
                 const SizedBox(height: 8),
                 Text(
                   labels[i],
+                  maxLines: 1,
                   style: const TextStyle(fontSize: 11, color: AppColors.muted),
                 ),
               ],

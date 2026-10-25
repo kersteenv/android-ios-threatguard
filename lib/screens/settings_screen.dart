@@ -17,9 +17,9 @@ class SettingsScreen extends StatelessWidget {
 
     return ListView(
       padding: EdgeInsets.fromLTRB(
-        20,
+        AppSpacing.screen,
         pad.top + 16,
-        20,
+        AppSpacing.screen,
         kDockClearance + pad.bottom,
       ),
       children: [
@@ -49,6 +49,8 @@ class SettingsScreen extends StatelessWidget {
                   children: [
                     Text(
                       'Alex Morgan',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.w800,
@@ -57,11 +59,12 @@ class SettingsScreen extends StatelessWidget {
                     SizedBox(height: 2),
                     Text(
                       'Premium Protection',
-                      style: TextStyle(color: AppColors.muted),
+                      style: TextStyle(color: AppColors.muted, fontSize: 13.5),
                     ),
                   ],
                 ),
               ),
+              const SizedBox(width: 10),
               StatusPill(
                 label: s.monitoring ? 'ACTIVE' : 'PAUSED',
                 color: s.monitoring ? AppColors.green : AppColors.orange,
@@ -137,7 +140,11 @@ class SettingsScreen extends StatelessWidget {
                   Sensitivity.strict =>
                     'Flags anything unusual. Maximum protection, more alerts.',
                 },
-                style: const TextStyle(color: AppColors.muted, fontSize: 13.5),
+                style: const TextStyle(
+                  color: AppColors.muted,
+                  fontSize: 13.5,
+                  height: 1.4,
+                ),
               ),
             ],
           ),
@@ -156,6 +163,15 @@ class SettingsScreen extends StatelessWidget {
               const Text(
                 'AI engine v4.2 · Threat intelligence up to date',
                 style: TextStyle(color: AppColors.muted, fontSize: 13),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'Demo build: all figures and results shown are simulated.',
+                style: TextStyle(
+                  color: AppColors.muted,
+                  fontSize: 12,
+                  height: 1.35,
+                ),
               ),
               const SizedBox(height: 16),
               SizedBox(
@@ -226,6 +242,7 @@ class _ToggleRow extends StatelessWidget {
               ],
             ),
           ),
+          const SizedBox(width: 8),
           Switch(
             value: value,
             onChanged: onChanged,

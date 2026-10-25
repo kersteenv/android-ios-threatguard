@@ -5,8 +5,11 @@ import 'package:flutter/services.dart';
 
 import '../theme/app_theme.dart';
 
+/// Height of the floating dock itself.
+const double kDockHeight = 74;
+
 /// Bottom space screens must leave free so content isn't hidden by the dock.
-const double kDockClearance = 104;
+const double kDockClearance = 108;
 
 class DockItem {
   const DockItem(this.icon, this.label);
@@ -28,6 +31,9 @@ class FloatingDock extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final radius = BorderRadius.circular(34);
+    // A navy tint under the white glass keeps scrolled content from competing
+    // with the tab labels, while the dock still reads as frosted glass.
+    final tint = AppColors.background.withAlpha(140);
     return SafeArea(
       top: false,
       minimum: const EdgeInsets.only(bottom: 8),
@@ -54,13 +60,17 @@ class FloatingDock extends StatelessWidget {
             child: BackdropFilter(
               filter: ImageFilter.blur(sigmaX: 26, sigmaY: 26),
               child: Container(
-                height: 70,
+                height: kDockHeight,
+                padding: const EdgeInsets.symmetric(horizontal: 4),
                 decoration: BoxDecoration(
                   borderRadius: radius,
                   gradient: LinearGradient(
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
-                    colors: [AppColors.white(0.16), AppColors.white(0.06)],
+                    colors: [
+                      Color.alphaBlend(AppColors.white(0.16), tint),
+                      Color.alphaBlend(AppColors.white(0.06), tint),
+                    ],
                   ),
                   border: Border.all(color: AppColors.white(0.18)),
                 ),
@@ -97,57 +107,70 @@ class _DockButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: () {
-        HapticFeedback.selectionClick();
-        onTap();
-      },
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          AnimatedContainer(
-            duration: const Duration(milliseconds: 280),
-            curve: Curves.easeOutCubic,
-            width: 46,
-            height: 34,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(17),
-              gradient: active
-                  ? LinearGradient(
-                      colors: [
-                        AppColors.primary.withAlpha(70),
-                        AppColors.blue.withAlpha(60),
-                      ],
-                    )
-                  : null,
-              boxShadow: active
-                  ? [
-                      BoxShadow(
-                        color: AppColors.primary.withAlpha(90),
-                        blurRadius: 18,
-                        spreadRadius: -2,
-                      ),
-                    ]
-                  : const [],
+    return Semantics(
+      button: true,
+      selected: active,
+      label: item.label,
+      excludeSemantics: true,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: () {
+          HapticFeedback.selectionClick();
+          onTap();
+        },
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 280),
+              curve: Curves.easeOutCubic,
+              width: 46,
+              height: 34,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(17),
+                gradient: active
+                    ? LinearGradient(
+                        colors: [
+                          AppColors.primary.withAlpha(70),
+                          AppColors.blue.withAlpha(60),
+                        ],
+                      )
+                    : null,
+                boxShadow: active
+                    ? [
+                        BoxShadow(
+                          color: AppColors.primary.withAlpha(90),
+                          blurRadius: 18,
+                          spreadRadius: -2,
+                        ),
+                      ]
+                    : const [],
+              ),
+              child: Icon(
+                item.icon,
+                size: 22,
+                color: active ? Colors.white : AppColors.muted,
+              ),
             ),
-            child: Icon(
-              item.icon,
-              size: 22,
-              color: active ? Colors.white : AppColors.muted,
+            const SizedBox(height: 4),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 2),
+              child: AnimatedDefaultTextStyle(
+                duration: const Duration(milliseconds: 280),
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  color: active ? AppColors.primary : AppColors.muted,
+                ),
+                // Scales down instead of clipping at large font sizes.
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(item.label, maxLines: 1),
+                ),
+              ),
             ),
-          ),
-          const SizedBox(height: 3),
-          AnimatedDefaultTextStyle(
-            duration: const Duration(milliseconds: 280),
-            style: TextStyle(
-              fontSize: 10,
-              fontWeight: FontWeight.w600,
-              color: active ? AppColors.primary : AppColors.muted,
-            ),
-            child: Text(item.label, maxLines: 1, overflow: TextOverflow.clip),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

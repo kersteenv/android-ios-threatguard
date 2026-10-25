@@ -46,7 +46,7 @@ class ThreatGuardApp extends StatelessWidget {
         final mq = MediaQuery.of(context);
         // Design width 390. The app column is capped at 520.
         final width = math.min(mq.size.width, 520.0);
-        final layoutScale = (width / 390).clamp(0.88, 1.1).toDouble();
+        final layoutScale = (width / 390).clamp(0.95, 1.1).toDouble();
         // Respect the user's font setting, but cap it so layouts don't break.
         final userScale = mq.textScaler.scale(1).clamp(0.9, 1.2).toDouble();
         return MediaQuery(

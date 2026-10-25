@@ -51,9 +51,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
 
     return ListView(
       padding: EdgeInsets.fromLTRB(
-        20,
+        AppSpacing.screen,
         pad.top + 16,
-        20,
+        AppSpacing.screen,
         kDockClearance + pad.bottom,
       ),
       children: [
@@ -80,6 +80,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
               ),
               const SizedBox(height: 6),
               Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Expanded(
                     child: _BigNumber(
@@ -88,6 +89,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                       color: AppColors.green,
                     ),
                   ),
+                  const SizedBox(width: 10),
                   Expanded(
                     child: _BigNumber(
                       value: '$scanned',
@@ -95,6 +97,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                       color: AppColors.primary,
                     ),
                   ),
+                  const SizedBox(width: 10),
                   Expanded(
                     child: _BigNumber(
                       value: rate,
@@ -111,7 +114,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
         GlassCard(
           padding: const EdgeInsets.all(18),
           child: SizedBox(
-            height: 190,
+            height: 170,
             child: AnimatedSwitcher(
               duration: const Duration(milliseconds: 300),
               child: TrendBars(
@@ -228,7 +231,13 @@ class _BigNumber extends StatelessWidget {
         ),
         Text(
           label,
-          style: const TextStyle(fontSize: 11.5, color: AppColors.muted),
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(
+            fontSize: 12,
+            height: 1.25,
+            color: AppColors.muted,
+          ),
         ),
       ],
     );

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../models/sms_message.dart';
@@ -46,108 +47,111 @@ class _SmsMonitorScreenState extends State<SmsMonitorScreen> {
     final list = _apply(s.messages);
     final safeCount = s.messages.where((m) => !m.isThreat).length;
 
-    return Stack(
-      children: [
-        RefreshIndicator(
-          color: AppColors.primary,
-          backgroundColor: AppColors.surface,
-          onRefresh: () => context.read<GuardState>().refresh(),
-          child: ListView(
-            physics: const AlwaysScrollableScrollPhysics(),
-            padding: EdgeInsets.fromLTRB(
-              20,
-              pad.top + 16,
-              20,
-              kDockClearance + pad.bottom + 60,
+    return RefreshIndicator(
+      color: AppColors.primary,
+      backgroundColor: AppColors.surface,
+      onRefresh: () => context.read<GuardState>().refresh(),
+      child: ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+        padding: EdgeInsets.fromLTRB(
+          AppSpacing.screen,
+          pad.top + 16,
+          AppSpacing.screen,
+          kDockClearance + pad.bottom,
+        ),
+        children: [
+          ScreenHeader(
+            title: 'SMS Monitor',
+            subtitle: 'Autonomous AI protection',
+            trailing: StatusPill(
+              label: s.monitoring ? 'LIVE' : 'PAUSED',
+              color: s.monitoring ? AppColors.green : AppColors.orange,
+              dot: true,
             ),
+          ),
+          GlassCard(
+            padding: const EdgeInsets.symmetric(vertical: 16),
+            child: Row(
+              children: [
+                _Stat(value: s.messagesScanned, label: 'Scanned'),
+                _Stat(
+                  value: s.blockedToday,
+                  label: 'Blocked',
+                  color: AppColors.red,
+                ),
+                _Stat(value: safeCount, label: 'Safe', color: AppColors.green),
+              ],
+            ),
+          ),
+          const SizedBox(height: AppSpacing.gapLg),
+          Row(
             children: [
-              ScreenHeader(
-                title: 'SMS Monitor',
-                subtitle: 'Autonomous AI protection',
-                trailing: StatusPill(
-                  label: s.monitoring ? 'LIVE' : 'PAUSED',
-                  color: s.monitoring ? AppColors.green : AppColors.orange,
-                  dot: true,
-                ),
-              ),
-              GlassCard(
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                child: Row(
-                  children: [
-                    _Stat(value: s.messagesScanned, label: 'Scanned'),
-                    _Stat(
-                      value: s.blockedToday,
-                      label: 'Blocked',
-                      color: AppColors.red,
+              Expanded(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14),
+                  decoration: BoxDecoration(
+                    color: AppColors.white(0.07),
+                    borderRadius: BorderRadius.circular(AppRadius.pill),
+                    border: Border.all(color: AppColors.white(0.12)),
+                  ),
+                  child: TextField(
+                    onChanged: (v) => setState(() => _query = v),
+                    textInputAction: TextInputAction.search,
+                    autocorrect: false,
+                    onTapOutside: (_) =>
+                        FocusManager.instance.primaryFocus?.unfocus(),
+                    style: const TextStyle(fontSize: 15),
+                    cursorColor: AppColors.primary,
+                    decoration: const InputDecoration(
+                      border: InputBorder.none,
+                      isDense: true,
+                      hintText: 'Search messages',
+                      hintStyle: TextStyle(color: AppColors.muted),
+                      prefixIcon: Icon(
+                        Icons.search_rounded,
+                        color: AppColors.muted,
+                      ),
+                      contentPadding: EdgeInsets.symmetric(vertical: 14),
                     ),
-                    _Stat(
-                      value: safeCount,
-                      label: 'Safe',
-                      color: AppColors.green,
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 16),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14),
-                decoration: BoxDecoration(
-                  color: AppColors.white(0.07),
-                  borderRadius: BorderRadius.circular(AppRadius.pill),
-                  border: Border.all(color: AppColors.white(0.12)),
-                ),
-                child: TextField(
-                  onChanged: (v) => setState(() => _query = v),
-                  style: const TextStyle(fontSize: 15),
-                  cursorColor: AppColors.primary,
-                  decoration: const InputDecoration(
-                    border: InputBorder.none,
-                    isDense: true,
-                    hintText: 'Search messages',
-                    hintStyle: TextStyle(color: AppColors.muted),
-                    prefixIcon: Icon(
-                      Icons.search_rounded,
-                      color: AppColors.muted,
-                    ),
-                    contentPadding: EdgeInsets.symmetric(vertical: 14),
                   ),
                 ),
               ),
-              const SizedBox(height: 14),
-              PillTabs(
-                labels: _filters,
-                index: _filter,
-                onChanged: (i) => setState(() => _filter = i),
-              ),
-              const SizedBox(height: 18),
-              if (list.isEmpty)
-                const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 40),
-                  child: Center(
-                    child: Text(
-                      'No messages match.',
-                      style: TextStyle(color: AppColors.muted),
-                    ),
-                  ),
-                ),
-              for (final m in list)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: _SmsCard(
-                    key: ValueKey(m.id),
-                    message: m,
-                    blocked: s.isBlocked(m.sender),
-                  ),
-                ),
+              const SizedBox(width: 10),
+              // Scan now lives beside the search field so it never covers
+              // message cards or the dock.
+              _ScanButton(onTap: () => showScanSheet(context)),
             ],
           ),
-        ),
-        Positioned(
-          right: 20,
-          bottom: kDockClearance + pad.bottom - 8,
-          child: _ScanFab(onTap: () => showScanSheet(context)),
-        ),
-      ],
+          const SizedBox(height: 14),
+          PillTabs(
+            labels: _filters,
+            index: _filter,
+            expand: true,
+            onChanged: (i) => setState(() => _filter = i),
+          ),
+          const SizedBox(height: 14),
+          if (list.isEmpty)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 40),
+              child: Center(
+                child: Text(
+                  'No messages match.',
+                  style: TextStyle(color: AppColors.muted),
+                ),
+              ),
+            ),
+          for (final m in list)
+            Padding(
+              padding: const EdgeInsets.only(bottom: AppSpacing.gap),
+              child: _SmsCard(
+                key: ValueKey(m.id),
+                message: m,
+                blocked: s.isBlocked(m.sender),
+              ),
+            ),
+        ],
+      ),
     );
   }
 }
@@ -253,71 +257,68 @@ class _SmsCard extends StatelessWidget {
                 ),
               ],
             ),
-            const SizedBox(height: 14),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(4),
-              child: Stack(
-                children: [
-                  Container(height: 5, color: AppColors.white(0.08)),
-                  FractionallySizedBox(
-                    widthFactor: m.risk / 100,
-                    child: Container(
-                      height: 5,
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [m.color.withAlpha(140), m.color],
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
             const SizedBox(height: 12),
+            // Risk bar with the percentage beside it (one compact row).
             Row(
-              crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 Expanded(
-                  child: Wrap(
-                    spacing: 6,
-                    runSpacing: 6,
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(4),
+                    child: Stack(
+                      children: [
+                        Container(height: 5, color: AppColors.white(0.08)),
+                        FractionallySizedBox(
+                          widthFactor: m.risk / 100,
+                          child: Container(
+                            height: 5,
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                colors: [m.color.withAlpha(140), m.color],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Text.rich(
+                  TextSpan(
                     children: [
-                      StatusPill(label: m.category.label, color: m.color),
-                      StatusPill(
-                        label: m.status.label,
-                        color: m.color,
-                        dot: true,
+                      TextSpan(
+                        text: '${m.risk}%',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w800,
+                          color: m.color,
+                        ),
                       ),
-                      StatusPill(
-                        label: '${m.confidence}% confidence',
-                        color: AppColors.muted,
+                      const TextSpan(
+                        text: ' RISK',
+                        style: TextStyle(
+                          fontSize: 10,
+                          letterSpacing: 1,
+                          color: AppColors.muted,
+                        ),
                       ),
                     ],
                   ),
                 ),
-                const SizedBox(width: 10),
-                Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Text(
-                      '${m.risk}%',
-                      style: TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.w800,
-                        color: m.color,
-                        height: 1,
-                      ),
-                    ),
-                    const Text(
-                      'RISK',
-                      style: TextStyle(
-                        fontSize: 10,
-                        letterSpacing: 1,
-                        color: AppColors.muted,
-                      ),
-                    ),
-                  ],
+              ],
+            ),
+            const SizedBox(height: 10),
+            Wrap(
+              spacing: 6,
+              runSpacing: 6,
+              children: [
+                // "Safe" messages would otherwise show "Safe" twice.
+                if (m.category.label != m.status.label)
+                  StatusPill(label: m.category.label, color: m.color),
+                StatusPill(label: m.status.label, color: m.color, dot: true),
+                StatusPill(
+                  label: '${m.confidence}% confidence',
+                  color: AppColors.muted,
                 ),
               ],
             ),
@@ -328,46 +329,42 @@ class _SmsCard extends StatelessWidget {
   }
 }
 
-class _ScanFab extends StatelessWidget {
-  const _ScanFab({required this.onTap});
+class _ScanButton extends StatelessWidget {
+  const _ScanButton({required this.onTap});
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(AppRadius.pill),
-        gradient: AppGradients.safe,
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.primary.withAlpha(110),
-            blurRadius: 26,
-            offset: const Offset(0, 10),
-            spreadRadius: -4,
-          ),
-        ],
-      ),
-      child: Material(
-        type: MaterialType.transparency,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(AppRadius.pill),
-          onTap: onTap,
-          child: const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 18, vertical: 14),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Icons.radar_rounded, size: 20, color: Color(0xFF03121C)),
-                SizedBox(width: 8),
-                Text(
-                  'Scan now',
-                  style: TextStyle(
-                    color: Color(0xFF03121C),
-                    fontWeight: FontWeight.w800,
-                    fontSize: 14.5,
-                  ),
-                ),
-              ],
+    return Tooltip(
+      message: 'Scan now',
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          gradient: AppGradients.safe,
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.primary.withAlpha(110),
+              blurRadius: 22,
+              offset: const Offset(0, 8),
+              spreadRadius: -4,
+            ),
+          ],
+        ),
+        child: Material(
+          type: MaterialType.transparency,
+          child: InkWell(
+            customBorder: const CircleBorder(),
+            onTap: () {
+              HapticFeedback.lightImpact();
+              onTap();
+            },
+            child: const SizedBox.square(
+              dimension: 52,
+              child: Icon(
+                Icons.radar_rounded,
+                size: 24,
+                color: Color(0xFF03121C),
+              ),
             ),
           ),
         ),

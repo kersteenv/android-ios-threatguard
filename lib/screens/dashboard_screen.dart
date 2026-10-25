@@ -17,6 +17,11 @@ class DashboardScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final s = context.watch<GuardState>();
     final pad = MediaQuery.paddingOf(context);
+    // The shield scales with screen height (about 17% smaller than before on
+    // a typical phone) so the dashboard needs less scrolling.
+    final heroSize = (MediaQuery.sizeOf(context).height * 0.28)
+        .clamp(200.0, 225.0)
+        .toDouble();
     return RefreshIndicator(
       color: AppColors.primary,
       backgroundColor: AppColors.surface,
@@ -24,85 +29,67 @@ class DashboardScreen extends StatelessWidget {
       child: ListView(
         physics: const AlwaysScrollableScrollPhysics(),
         padding: EdgeInsets.fromLTRB(
-          20,
+          AppSpacing.screen,
           pad.top + 12,
-          20,
+          AppSpacing.screen,
           kDockClearance + pad.bottom,
         ),
         children: [
           _TopBar(state: s),
-          const SizedBox(height: 8),
-          const Center(child: ShieldHero(size: 270)),
+          const SizedBox(height: 4),
+          Center(child: ShieldHero(size: heroSize)),
           _HeroText(state: s),
           const SectionHeader('Today'),
-          Row(
+          EqualRow(
             children: [
-              Expanded(
-                child: _MetricCard(
-                  icon: Icons.block_rounded,
-                  color: AppColors.green,
-                  value: s.blockedToday,
-                  label: 'Threats Blocked Today',
-                ),
+              _MetricCard(
+                icon: Icons.block_rounded,
+                color: AppColors.green,
+                value: s.blockedToday,
+                label: 'Threats Blocked Today',
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: _MetricCard(
-                  icon: Icons.mark_email_read_rounded,
-                  color: AppColors.primary,
-                  value: s.messagesScanned,
-                  label: 'Messages Scanned',
-                ),
+              _MetricCard(
+                icon: Icons.mark_email_read_rounded,
+                color: AppColors.primary,
+                value: s.messagesScanned,
+                label: 'Messages Scanned',
               ),
             ],
           ),
-          const SizedBox(height: 12),
-          Row(
+          const SizedBox(height: AppSpacing.gap),
+          EqualRow(
             children: [
-              Expanded(
-                child: _MetricCard(
-                  icon: Icons.warning_rounded,
-                  color: AppColors.orange,
-                  value: s.highRisk,
-                  label: 'High Risk Messages',
-                ),
+              _MetricCard(
+                icon: Icons.warning_rounded,
+                color: AppColors.orange,
+                value: s.highRisk,
+                label: 'High Risk Messages',
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: _MetricCard(
-                  icon: Icons.person_off_rounded,
-                  color: AppColors.violet,
-                  value: s.blockedSenderCount,
-                  label: 'Blocked Senders',
-                ),
+              _MetricCard(
+                icon: Icons.person_off_rounded,
+                color: AppColors.violet,
+                value: s.blockedSenderCount,
+                label: 'Blocked Senders',
               ),
             ],
           ),
           const SectionHeader('Quick Actions'),
-          Row(
+          EqualRow(
             children: [
-              Expanded(
-                child: _QuickAction(
-                  icon: Icons.radar_rounded,
-                  label: 'Run Scan',
-                  onTap: () => showScanSheet(context),
-                ),
+              _QuickAction(
+                icon: Icons.radar_rounded,
+                label: 'Run Scan',
+                onTap: () => showScanSheet(context),
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: _QuickAction(
-                  icon: Icons.shield_rounded,
-                  label: 'View Threats',
-                  onTap: () => onNavigate(2),
-                ),
+              _QuickAction(
+                icon: Icons.shield_rounded,
+                label: 'View Threats',
+                onTap: () => onNavigate(2),
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: _QuickAction(
-                  icon: Icons.fact_check_rounded,
-                  label: 'Security Check',
-                  onTap: () => showSecurityCheckSheet(context),
-                ),
+              _QuickAction(
+                icon: Icons.fact_check_rounded,
+                label: 'Security Check',
+                onTap: () => showSecurityCheckSheet(context),
               ),
             ],
           ),
@@ -185,35 +172,28 @@ class _HeroText extends StatelessWidget {
           textAlign: TextAlign.center,
           style: TextStyle(color: AppColors.muted, fontSize: 15, height: 1.45),
         ),
-        const SizedBox(height: 20),
-        Row(
+        const SizedBox(height: 16),
+        EqualRow(
+          gap: 10,
           children: [
-            Expanded(
-              child: _HeroStat(
-                value: '${state.protectionScore}%',
-                label: 'Protection Score',
-                color: AppColors.green,
-              ),
+            _HeroStat(
+              value: '${state.protectionScore}%',
+              label: 'Protection Score',
+              color: AppColors.green,
             ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: _HeroStat(
-                value: on ? 'ONLINE' : 'STANDBY',
-                label: 'AI Engine',
-                color: AppColors.primary,
-              ),
+            _HeroStat(
+              value: on ? 'ONLINE' : 'STANDBY',
+              label: 'AI Engine',
+              color: AppColors.primary,
             ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: _HeroStat(
-                value: on ? 'ACTIVE' : 'OFF',
-                label: 'SMS Monitoring',
-                color: on ? AppColors.green : AppColors.orange,
-              ),
+            _HeroStat(
+              value: on ? 'ACTIVE' : 'OFF',
+              label: 'SMS Monitoring',
+              color: on ? AppColors.green : AppColors.orange,
             ),
           ],
         ),
-        const SizedBox(height: 18),
+        const SizedBox(height: 16),
         SizedBox(
           width: double.infinity,
           child: GradientButton(
@@ -239,12 +219,13 @@ class _HeroStat extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GlassCard(
-      radius: 22,
-      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
+      radius: AppRadius.tile,
+      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 10),
       child: Column(
-        mainAxisSize: MainAxisSize.min,
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
           FittedBox(
+            fit: BoxFit.scaleDown,
             child: Text(
               value,
               style: TextStyle(
@@ -254,11 +235,24 @@ class _HeroStat extends StatelessWidget {
               ),
             ),
           ),
-          const SizedBox(height: 2),
-          Text(
-            label,
-            textAlign: TextAlign.center,
-            style: const TextStyle(fontSize: 10.5, color: AppColors.muted),
+          const SizedBox(height: 4),
+          // Two lines are always reserved so all three cards match.
+          SizedBox(
+            height: textBlockHeight(context, 11.5),
+            child: Align(
+              alignment: Alignment.topCenter,
+              child: Text(
+                label,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 11.5,
+                  height: 1.25,
+                  color: AppColors.muted,
+                ),
+              ),
+            ),
           ),
         ],
       ),
@@ -297,9 +291,18 @@ class _MetricCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 4),
-          Text(
-            label,
-            style: const TextStyle(fontSize: 12, color: AppColors.muted),
+          SizedBox(
+            height: textBlockHeight(context, 12),
+            child: Text(
+              label,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                fontSize: 12,
+                height: 1.25,
+                color: AppColors.muted,
+              ),
+            ),
           ),
         ],
       ),
@@ -320,8 +323,8 @@ class _QuickAction extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GlassCard(
-      radius: 24,
-      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 6),
+      radius: AppRadius.tile,
+      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
       onTap: onTap,
       child: Column(
         children: [
@@ -335,10 +338,22 @@ class _QuickAction extends StatelessWidget {
             child: Icon(icon, size: 22),
           ),
           const SizedBox(height: 10),
-          Text(
-            label,
-            textAlign: TextAlign.center,
-            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+          // Fixed two-line slot keeps icons aligned and labels centred.
+          SizedBox(
+            height: textBlockHeight(context, 12.5),
+            child: Center(
+              child: Text(
+                label,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 12.5,
+                  height: 1.25,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
           ),
         ],
       ),

@@ -378,14 +378,14 @@ class GlassIconButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      width: 46,
-      height: 46,
+      width: AppSpacing.touch,
+      height: AppSpacing.touch,
       child: Stack(
         clipBehavior: Clip.none,
         children: [
           Positioned.fill(
             child: GlassCard(
-              radius: 23,
+              radius: 24,
               blur: 14,
               padding: EdgeInsets.zero,
               onTap: onTap,
@@ -394,8 +394,8 @@ class GlassIconButton extends StatelessWidget {
           ),
           if (badge)
             Positioned(
-              right: 11,
-              top: 11,
+              right: 12,
+              top: 12,
               child: Container(
                 width: 9,
                 height: 9,
@@ -454,17 +454,31 @@ class PillTabs extends StatelessWidget {
 
   Widget _pill(int i) {
     final active = i == index;
+    final label = Text(
+      labels[i],
+      maxLines: 1,
+      softWrap: false,
+      style: TextStyle(
+        fontSize: 13.5,
+        fontWeight: FontWeight.w600,
+        color: active ? Colors.white : AppColors.muted,
+      ),
+    );
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: () {
         HapticFeedback.selectionClick();
         onChanged(i);
       },
-      child: AnimatedContainer(
+      // Transparent vertical padding lifts the touch target to ~48dp without
+      // changing how the pill looks.
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 3),
+        child: AnimatedContainer(
         duration: const Duration(milliseconds: 240),
         curve: Curves.easeOutCubic,
         alignment: expand ? Alignment.center : null,
-        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 11),
+        padding: EdgeInsets.symmetric(horizontal: expand ? 8 : 18, vertical: 11),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(AppRadius.pill),
           gradient: active
@@ -491,14 +505,9 @@ class PillTabs extends StatelessWidget {
                 ]
               : const [],
         ),
-        child: Text(
-          labels[i],
-          style: TextStyle(
-            fontSize: 13.5,
-            fontWeight: FontWeight.w600,
-            color: active ? Colors.white : AppColors.muted,
-          ),
-        ),
+        // Equal-width tabs shrink their text instead of wrapping mid-word.
+        child: expand ? FittedBox(fit: BoxFit.scaleDown, child: label) : label,
+      ),
       ),
     );
   }
@@ -516,6 +525,41 @@ class PillTabs extends StatelessWidget {
       scrollDirection: Axis.horizontal,
       clipBehavior: Clip.none,
       child: Row(children: children),
+    );
+  }
+}
+
+/// Height of [lines] lines of text at [fontSize] after the app's text scaling.
+/// Use it to reserve room so sibling cards stay the same height.
+double textBlockHeight(
+  BuildContext context,
+  double fontSize, {
+  double height = 1.25,
+  int lines = 2,
+}) => MediaQuery.textScalerOf(context).scale(fontSize) * height * lines;
+
+/// Row of equal-width, equal-height children (cards in the same group).
+class EqualRow extends StatelessWidget {
+  const EqualRow({
+    super.key,
+    required this.children,
+    this.gap = AppSpacing.gap,
+  });
+  final List<Widget> children;
+  final double gap;
+
+  @override
+  Widget build(BuildContext context) {
+    return IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          for (var i = 0; i < children.length; i++) ...[
+            if (i > 0) SizedBox(width: gap),
+            Expanded(child: children[i]),
+          ],
+        ],
+      ),
     );
   }
 }

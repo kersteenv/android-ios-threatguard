@@ -41,8 +41,18 @@ class AppGradients {
 
 class AppRadius {
   AppRadius._();
-  static const double card = 28;
+  static const double card = 28; // large feature cards
+  static const double tile = 22; // compact tiles, rows and quick actions
   static const double pill = 999;
+}
+
+/// Shared layout constants so every screen uses the same rhythm.
+class AppSpacing {
+  AppSpacing._();
+  static const double screen = 20; // horizontal screen padding
+  static const double gap = 12; // between neighbouring cards
+  static const double gapLg = 16;
+  static const double touch = 48; // minimum touch target
 }
 
 class AppTheme {
