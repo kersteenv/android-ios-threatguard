@@ -72,13 +72,26 @@ class _SheetFrame extends StatelessWidget {
   }
 }
 
+/// Asks for SMS access through the backend hook. Until the backend provides
+/// that hook, it says so plainly instead of pretending to ask.
+Future<void> requestSmsAccess(BuildContext context) async {
+  final state = context.read<GuardState>();
+  if (!state.canRequestPermission) {
+    showToast(context, 'SMS permission is not connected yet (needs backend).');
+    return;
+  }
+  await state.requestSmsPermission();
+}
+
 // ---------------------------------------------------------------- checklist
 
+enum _CheckState { ok, attention, pending }
+
 class _Check {
-  const _Check(this.icon, this.title, this.subtitle, this.ok);
+  const _Check(this.icon, this.title, this.subtitle, this.state);
   final IconData icon;
   final String title, subtitle;
-  final bool ok;
+  final _CheckState state;
 }
 
 class _CheckRow extends StatelessWidget {
@@ -87,7 +100,16 @@ class _CheckRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = check.ok ? AppColors.green : AppColors.orange;
+    final color = switch (check.state) {
+      _CheckState.ok => AppColors.green,
+      _CheckState.attention => AppColors.orange,
+      _CheckState.pending => AppColors.muted,
+    };
+    final trailing = switch (check.state) {
+      _CheckState.ok => Icons.check_circle_rounded,
+      _CheckState.attention => Icons.error_rounded,
+      _CheckState.pending => Icons.schedule_rounded,
+    };
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(14),
@@ -125,49 +147,81 @@ class _CheckRow extends StatelessWidget {
           ),
           // Fixed gap so long titles can never touch the status icon.
           const SizedBox(width: 12),
-          Icon(
-            check.ok ? Icons.check_circle_rounded : Icons.error_rounded,
-            color: color,
-            size: 22,
-          ),
+          Icon(trailing, color: color, size: 22),
         ],
       ),
     );
   }
 }
 
-List<_Check> _checks(GuardState s) => [
-  _Check(
-    Icons.sms,
-    'Autonomous SMS monitoring',
-    s.monitoring ? 'Watching every incoming message' : 'Paused',
-    s.monitoring,
-  ),
-  _Check(
-    Icons.psychology,
-    'AI phishing detection',
-    s.monitoring ? 'Engine online and up to date' : 'Standby',
-    s.monitoring,
-  ),
-  _Check(
-    Icons.link,
-    'Real-time link scanning',
-    s.linkScanning ? 'Links checked before you open them' : 'Turned off',
-    s.linkScanning,
-  ),
-  _Check(
-    Icons.block,
-    'Auto-block high-risk senders',
-    s.autoBlock ? 'Dangerous senders are blocked' : 'Turned off',
-    s.autoBlock,
-  ),
-  _Check(
-    Icons.notifications_active,
-    'Threat alerts',
-    s.alerts ? 'You are notified instantly' : 'Turned off',
-    s.alerts,
-  ),
-];
+/// Every row reflects real state. Anything the backend has not provided yet
+/// is shown as "pending", never as working.
+List<_Check> _checks(GuardState s) {
+  final access = switch (s.smsPermission) {
+    SmsPermission.granted => const _Check(
+      Icons.sms,
+      'SMS access',
+      'Permission granted',
+      _CheckState.ok,
+    ),
+    SmsPermission.notGranted => const _Check(
+      Icons.sms,
+      'SMS access',
+      'Permission required',
+      _CheckState.attention,
+    ),
+    SmsPermission.unsupported => const _Check(
+      Icons.sms,
+      'SMS access',
+      'Not supported on this device',
+      _CheckState.pending,
+    ),
+  };
+  final scan = s.scanning
+      ? const _Check(
+          Icons.radar_rounded,
+          'Message scanning',
+          'Scan in progress',
+          _CheckState.pending,
+        )
+      : s.lastScan != null
+      ? const _Check(
+          Icons.radar_rounded,
+          'Message scanning',
+          'Last scan completed',
+          _CheckState.ok,
+        )
+      : _Check(
+          Icons.radar_rounded,
+          'Message scanning',
+          s.smsPermission == SmsPermission.granted
+              ? 'Ready to scan'
+              : 'Waiting for SMS access',
+          _CheckState.pending,
+        );
+  return [
+    access,
+    scan,
+    _Check(
+      Icons.sensors_rounded,
+      'Real-time monitoring',
+      s.monitoringRunning ? 'Monitoring active' : 'Not running · needs backend',
+      s.monitoringRunning ? _CheckState.ok : _CheckState.pending,
+    ),
+    _Check(
+      Icons.psychology,
+      'AI threat detection',
+      s.engineConnected ? 'Engine connected' : 'Not connected · needs backend',
+      s.engineConnected ? _CheckState.ok : _CheckState.pending,
+    ),
+    _Check(
+      Icons.notifications_active,
+      'Threat alerts',
+      s.alerts ? 'Preference on · needs backend' : 'Turned off',
+      _CheckState.pending,
+    ),
+  ];
+}
 
 // ---------------------------------------------------------------- protection
 
@@ -180,16 +234,22 @@ class _ProtectionSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final s = context.watch<GuardState>();
+    final score = s.protectionScore;
     return Column(
       children: [
+        if (s.demoMode) const DemoBanner(),
         const ShieldHero(size: 190),
         Text(
-          s.monitoring ? 'You are protected' : 'Protection paused',
+          s.status.label,
+          textAlign: TextAlign.center,
           style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800),
         ),
         const SizedBox(height: 4),
         Text(
-          'Protection score ${s.protectionScore}%',
+          score == null
+              ? 'Protection score not available yet'
+              : 'Protection score $score%',
+          textAlign: TextAlign.center,
           style: const TextStyle(color: AppColors.muted),
         ),
         const SizedBox(height: 18),
@@ -210,24 +270,27 @@ class _SecuritySheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final s = context.watch<GuardState>();
-    final checks = [
-      ..._checks(s),
-      const _Check(
-        Icons.system_update,
-        'AI model up to date',
-        'Threat intelligence refreshed today',
-        true,
-      ),
-    ];
-    final issues = checks.where((c) => !c.ok).length;
+    final checks = _checks(s);
+    final attention = checks
+        .where((c) => c.state == _CheckState.attention)
+        .length;
+    final pending = checks.where((c) => c.state == _CheckState.pending).length;
+    final score = s.protectionScore;
+    final summary = attention > 0
+        ? '$attention item${attention == 1 ? '' : 's'} need your attention.'
+        : pending > 0
+        ? '$pending check${pending == 1 ? ' is' : 's are'} waiting on setup or the backend.'
+        : 'All checks passed.';
     return Column(
       children: [
+        if (s.demoMode) const DemoBanner(),
         Row(
           children: [
             MiniRing(
-              value: s.protectionScore.toDouble(),
+              value: score?.toDouble() ?? 0,
+              text: score == null ? '—' : null,
               size: 76,
-              color: issues == 0 ? AppColors.green : AppColors.orange,
+              color: attention > 0 ? AppColors.orange : AppColors.green,
             ),
             const SizedBox(width: 16),
             Expanded(
@@ -240,9 +303,7 @@ class _SecuritySheet extends StatelessWidget {
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    issues == 0
-                        ? 'All checks passed. Your device is well protected.'
-                        : '$issues item${issues == 1 ? '' : 's'} need your attention.',
+                    summary,
                     style: const TextStyle(
                       color: AppColors.muted,
                       fontSize: 13.5,
@@ -280,26 +341,83 @@ class _ScanSheetState extends State<_ScanSheet> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      context.read<GuardState>().runScan();
-      setState(() => _started = true);
+      final s = context.read<GuardState>();
+      // Starts the real scan only when the backend has provided one.
+      if (s.canScan && !s.scanning) {
+        s.runScan();
+        setState(() => _started = true);
+      }
     });
   }
 
   @override
   Widget build(BuildContext context) {
     final s = context.watch<GuardState>();
-    final done = _started && !s.scanning && s.scanProgress >= 1;
-    const steps = [
-      'Reading incoming messages',
-      'Checking links & domains',
-      'Analyzing language patterns',
-      'Scoring threats',
-    ];
-    final active = (s.scanProgress * steps.length)
-        .floor()
-        .clamp(0, steps.length - 1)
-        .toInt();
+    void close() => Navigator.of(context).pop();
 
+    if (s.demoMode) {
+      return _ScanInfo(
+        icon: Icons.science_rounded,
+        color: AppColors.orange,
+        title: 'Demo mode',
+        message: 'Sample messages are shown, so there is nothing to scan. Turn off demo mode in Settings to use your real messages.',
+        actions: [GhostButton(label: 'Close', onPressed: close)],
+      );
+    }
+    switch (s.smsPermission) {
+      case SmsPermission.unsupported:
+        return _ScanInfo(
+          icon: Icons.block_rounded,
+          color: AppColors.muted,
+          title: 'Not supported',
+          message: 'SMS scanning is not available on this device or platform.',
+          actions: [GhostButton(label: 'Close', onPressed: close)],
+        );
+      case SmsPermission.notGranted:
+        return _ScanInfo(
+          icon: Icons.sms_failed_rounded,
+          color: AppColors.orange,
+          title: 'SMS access required',
+          message: 'ThreatGuard needs permission to read your messages before it can scan them.',
+          actions: [
+            GradientButton(
+              label: 'Allow SMS access',
+              icon: Icons.sms_rounded,
+              onPressed: () => requestSmsAccess(context),
+            ),
+            GhostButton(label: 'Close', onPressed: close),
+          ],
+        );
+      case SmsPermission.granted:
+        break;
+    }
+    if (s.scanHandler == null) {
+      return _ScanInfo(
+        icon: Icons.hourglass_empty_rounded,
+        color: AppColors.primary,
+        title: 'Scanning is not connected yet',
+        message: 'SMS access is granted. Message analysis becomes available once the backend is integrated.',
+        actions: [GhostButton(label: 'Close', onPressed: close)],
+      );
+    }
+
+    final done = _started && !s.scanning && s.lastScan != null;
+    if (s.scanError != null && !s.scanning) {
+      return _ScanInfo(
+        icon: Icons.error_rounded,
+        color: AppColors.orange,
+        title: 'Scan failed',
+        message: s.scanError!,
+        actions: [
+          GradientButton(
+            label: 'Try again',
+            icon: Icons.refresh_rounded,
+            onPressed: () => s.runScan(),
+          ),
+          GhostButton(label: 'Close', onPressed: close),
+        ],
+      );
+    }
     return Column(
       children: [
         MiniRing(
@@ -315,57 +433,62 @@ class _ScanSheetState extends State<_ScanSheet> {
         const SizedBox(height: 6),
         Text(
           done
-              ? '${s.totalThreats} threats are being neutralized. Everything else is safe.'
-              : 'ThreatGuard AI is checking every message.',
+              ? '${s.messagesScanned} messages analyzed · ${s.threatCount} threats found'
+              : '${(s.scanProgress * 100).round()}% complete',
           textAlign: TextAlign.center,
           style: const TextStyle(color: AppColors.muted),
         ),
-        const SizedBox(height: 20),
-        for (var i = 0; i < steps.length; i++)
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 6),
-            child: Row(
-              children: [
-                Icon(
-                  done || i < active
-                      ? Icons.check_circle_rounded
-                      : i == active
-                      ? Icons.radio_button_checked_rounded
-                      : Icons.radio_button_unchecked_rounded,
-                  size: 20,
-                  color: done || i < active
-                      ? AppColors.green
-                      : i == active
-                      ? AppColors.primary
-                      : AppColors.muted,
-                ),
-                const SizedBox(width: 12),
-                Text(
-                  steps[i],
-                  style: TextStyle(
-                    fontSize: 14.5,
-                    color: done || i <= active
-                        ? AppColors.text
-                        : AppColors.muted,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        const SizedBox(height: 20),
+        const SizedBox(height: 22),
         SizedBox(
           width: double.infinity,
           child: done
               ? GradientButton(
                   label: 'Done',
                   icon: Icons.check_rounded,
-                  onPressed: () => Navigator.of(context).pop(),
+                  onPressed: close,
                 )
-              : GhostButton(
-                  label: 'Hide',
-                  onPressed: () => Navigator.of(context).pop(),
-                ),
+              : GhostButton(label: 'Hide', onPressed: close),
         ),
+      ],
+    );
+  }
+}
+
+class _ScanInfo extends StatelessWidget {
+  const _ScanInfo({
+    required this.icon,
+    required this.color,
+    required this.title,
+    required this.message,
+    required this.actions,
+  });
+  final IconData icon;
+  final Color color;
+  final String title, message;
+  final List<Widget> actions;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        ThreatIcon(icon: icon, color: color, size: 72),
+        const SizedBox(height: 18),
+        Text(
+          title,
+          textAlign: TextAlign.center,
+          style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          message,
+          textAlign: TextAlign.center,
+          style: const TextStyle(color: AppColors.muted, height: 1.4),
+        ),
+        const SizedBox(height: 22),
+        for (var i = 0; i < actions.length; i++) ...[
+          if (i > 0) const SizedBox(height: 10),
+          SizedBox(width: double.infinity, child: actions[i]),
+        ],
       ],
     );
   }
@@ -377,17 +500,19 @@ void showAlertsSheet(BuildContext context) {
   showGlassSheet<void>(
     context,
     builder: (ctx) {
-      final items = context.read<GuardState>().activity.take(4).toList();
+      final state = context.read<GuardState>();
+      final items = state.activity.take(4).toList();
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          if (state.demoMode) const DemoBanner(),
           const Text(
             'Recent alerts',
             style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800),
           ),
           const SizedBox(height: 4),
           const Text(
-            'Threats ThreatGuard handled for you',
+            'Threats found in analyzed messages',
             style: TextStyle(color: AppColors.muted),
           ),
           const SizedBox(height: 16),
@@ -396,7 +521,7 @@ void showAlertsSheet(BuildContext context) {
               padding: EdgeInsets.symmetric(vertical: 24),
               child: Center(
                 child: Text(
-                  'No alerts. You are all clear.',
+                  'No alerts yet.',
                   style: TextStyle(color: AppColors.muted),
                 ),
               ),
@@ -449,24 +574,26 @@ void showMessageActions(BuildContext context, SmsMessage m) {
               openAnalysis(context, m);
             },
           ),
-          _SheetAction(
-            icon: blocked ? Icons.lock_open : Icons.block,
-            color: blocked ? AppColors.green : AppColors.red,
-            label: blocked ? 'Unblock sender' : 'Block sender',
-            caption: blocked
-                ? 'Allow messages from this sender again'
-                : 'Stop all future messages from this sender',
-            onTap: () {
-              Navigator.of(ctx).pop();
-              if (blocked) {
-                state.unblockSender(m.sender);
-                showToast(context, '${m.sender} unblocked');
-              } else {
-                state.blockSender(m.sender);
-                showToast(context, '${m.sender} blocked');
-              }
-            },
-          ),
+          // Only offered when real blocking exists on the device.
+          if (state.blockingAvailable)
+            _SheetAction(
+              icon: blocked ? Icons.lock_open : Icons.block,
+              color: blocked ? AppColors.green : AppColors.red,
+              label: blocked ? 'Unblock sender' : 'Block sender',
+              caption: blocked
+                  ? 'Allow messages from this sender again'
+                  : 'Stop all future messages from this sender',
+              onTap: () {
+                Navigator.of(ctx).pop();
+                if (blocked) {
+                  state.unblockSender(m.sender);
+                  showToast(context, '${m.sender} unblocked');
+                } else {
+                  state.blockSender(m.sender);
+                  showToast(context, '${m.sender} blocked');
+                }
+              },
+            ),
         ],
       );
     },

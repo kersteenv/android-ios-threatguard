@@ -32,23 +32,26 @@ class SettingsScreen extends StatelessWidget {
               Container(
                 width: 56,
                 height: 56,
-                alignment: Alignment.center,
-                decoration: const BoxDecoration(
+                decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   gradient: AppGradients.aurora,
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppColors.primary.withAlpha(110),
+                      blurRadius: 22,
+                      spreadRadius: -2,
+                    ),
+                  ],
                 ),
-                child: const Text(
-                  'AM',
-                  style: TextStyle(fontWeight: FontWeight.w800, fontSize: 18),
-                ),
+                child: const Icon(Icons.shield_rounded, size: 28),
               ),
               const SizedBox(width: 14),
-              const Expanded(
+              Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      'Alex Morgan',
+                    const Text(
+                      'My Device',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
@@ -56,19 +59,33 @@ class SettingsScreen extends StatelessWidget {
                         fontWeight: FontWeight.w800,
                       ),
                     ),
-                    SizedBox(height: 2),
-                    Text(
-                      'Premium Protection',
+                    const SizedBox(height: 2),
+                    const Text(
+                      'ThreatGuard AI Protection',
                       style: TextStyle(color: AppColors.muted, fontSize: 13.5),
+                    ),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 6,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      children: [
+                        const Text(
+                          'Protection Status',
+                          style: TextStyle(
+                            color: AppColors.muted,
+                            fontSize: 12.5,
+                          ),
+                        ),
+                        StatusPill(
+                          label: s.status.label,
+                          color: s.status.color,
+                          dot: true,
+                        ),
+                      ],
                     ),
                   ],
                 ),
-              ),
-              const SizedBox(width: 10),
-              StatusPill(
-                label: s.monitoring ? 'ACTIVE' : 'PAUSED',
-                color: s.monitoring ? AppColors.green : AppColors.orange,
-                dot: true,
               ),
             ],
           ),
@@ -117,6 +134,17 @@ class SettingsScreen extends StatelessWidget {
             ],
           ),
         ),
+        const Padding(
+          padding: EdgeInsets.fromLTRB(4, 10, 4, 0),
+          child: Text(
+            'These are your preferences. The features behind them connect with the backend.',
+            style: TextStyle(
+              color: AppColors.muted,
+              fontSize: 12,
+              height: 1.35,
+            ),
+          ),
+        ),
         const SectionHeader('Detection Sensitivity'),
         GlassCard(
           padding: const EdgeInsets.all(18),
@@ -161,30 +189,32 @@ class SettingsScreen extends StatelessWidget {
               ),
               const SizedBox(height: 2),
               const Text(
-                'AI engine v4.2 · Threat intelligence up to date',
+                'Detection engine: not connected yet (pending backend).',
                 style: TextStyle(color: AppColors.muted, fontSize: 13),
               ),
-              const SizedBox(height: 8),
-              const Text(
-                'Demo build: all figures and results shown are simulated.',
-                style: TextStyle(
-                  color: AppColors.muted,
-                  fontSize: 12,
-                  height: 1.35,
-                ),
+              const SizedBox(height: 12),
+              _ToggleRow(
+                icon: Icons.science_rounded,
+                title: 'Demo mode',
+                subtitle: 'Show sample messages. Not real device data.',
+                value: s.demoMode,
+                last: !s.demoMode,
+                onChanged: (v) => s.setDemoMode(v),
               ),
-              const SizedBox(height: 16),
-              SizedBox(
-                width: double.infinity,
-                child: GhostButton(
-                  label: 'Reset demo data',
-                  icon: Icons.restart_alt_rounded,
-                  onPressed: () {
-                    context.read<GuardState>().reset();
-                    showToast(context, 'Demo data reset');
-                  },
+              if (s.demoMode) ...[
+                const SizedBox(height: 14),
+                SizedBox(
+                  width: double.infinity,
+                  child: GhostButton(
+                    label: 'Reset demo data',
+                    icon: Icons.restart_alt_rounded,
+                    onPressed: () {
+                      context.read<GuardState>().reset();
+                      showToast(context, 'Demo data reset');
+                    },
+                  ),
                 ),
-              ),
+              ],
             ],
           ),
         ),

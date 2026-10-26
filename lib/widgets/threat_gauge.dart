@@ -142,11 +142,15 @@ class MiniRing extends StatelessWidget {
     required this.value,
     this.color = AppColors.green,
     this.size = 64,
+    this.text,
   });
 
   final double value; // 0 – 100
   final Color color;
   final double size;
+
+  /// Replaces the "NN%" label (for example "—" when no value exists yet).
+  final String? text;
 
   @override
   Widget build(BuildContext context) {
@@ -159,27 +163,36 @@ class MiniRing extends StatelessWidget {
         child: CustomPaint(
           painter: _RingPainter(v / 100, color),
           child: Center(
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.baseline,
-              textBaseline: TextBaseline.alphabetic,
-              children: [
-                Text(
-                  v.round().toString(),
-                  style: TextStyle(
-                    fontSize: size * 0.3,
-                    fontWeight: FontWeight.w700,
+            child: text != null
+                ? Text(
+                    text!,
+                    style: TextStyle(
+                      fontSize: size * 0.3,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.muted,
+                    ),
+                  )
+                : Row(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.baseline,
+                    textBaseline: TextBaseline.alphabetic,
+                    children: [
+                      Text(
+                        v.round().toString(),
+                        style: TextStyle(
+                          fontSize: size * 0.3,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      Text(
+                        '%',
+                        style: TextStyle(
+                          fontSize: size * 0.17,
+                          color: AppColors.muted,
+                        ),
+                      ),
+                    ],
                   ),
-                ),
-                Text(
-                  '%',
-                  style: TextStyle(
-                    fontSize: size * 0.17,
-                    color: AppColors.muted,
-                  ),
-                ),
-              ],
-            ),
           ),
         ),
       ),

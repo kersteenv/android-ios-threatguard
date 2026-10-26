@@ -268,7 +268,7 @@ class _MessageCard extends StatelessWidget {
                     ),
                   ),
                   const Text(
-                    'Link disabled',
+                    'Do not open',
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w700,
@@ -424,7 +424,7 @@ class _RecommendationCard extends StatelessWidget {
     final (title, body) = switch (m.level) {
       RiskLevel.high => (
         'Do not respond or click',
-        'ThreatGuard blocked this message and disabled its link. Delete it and contact the company only through its official app or website.',
+        'This message shows strong scam signals. Do not reply or tap any link. Delete it and contact the company only through its official app or website.',
       ),
       RiskLevel.medium => (
         'Verify before you act',
@@ -432,7 +432,7 @@ class _RecommendationCard extends StatelessWidget {
       ),
       RiskLevel.low => (
         'You are all set',
-        'No suspicious phrases, links or manipulation were found, so this message was delivered normally.',
+        'No suspicious phrases, links or manipulation were found in this message.',
       ),
     };
     final blocked = s.isBlocked(m.sender);
@@ -473,7 +473,7 @@ class _RecommendationCard extends StatelessWidget {
               height: 1.45,
             ),
           ),
-          if (m.isThreat) ...[
+          if (m.isThreat && s.blockingAvailable) ...[
             const SizedBox(height: 16),
             SizedBox(
               width: double.infinity,
@@ -726,16 +726,11 @@ class _ProtectionTabState extends State<_ProtectionTab> {
     final m = widget.message;
     final actions = switch (m.level) {
       RiskLevel.high => const [
-        'Message quarantined before you could open the link',
-        'Link disabled and previews blocked',
-        'Sender added to your block list',
-        'Threat signature shared with the AI engine',
+        'Message flagged as high risk',
+        'No automatic action was taken. Blocking needs backend integration.',
       ],
-      RiskLevel.medium => const [
-        'Message flagged with a warning',
-        'Link opens only through a safe preview',
-      ],
-      RiskLevel.low => const ['Delivered normally', 'No action needed'],
+      RiskLevel.medium => const ['Message flagged with a warning'],
+      RiskLevel.low => const ['No threat signals found'],
     };
     final todo = switch (m.level) {
       RiskLevel.high => const [
@@ -755,7 +750,7 @@ class _ProtectionTabState extends State<_ProtectionTab> {
     return ListView(
       padding: const EdgeInsets.fromLTRB(20, 4, 20, 32),
       children: [
-        const SectionHeader('Actions taken for you'),
+        const SectionHeader('Analysis result'),
         GlassCard(
           padding: const EdgeInsets.all(18),
           glow: AppColors.green,

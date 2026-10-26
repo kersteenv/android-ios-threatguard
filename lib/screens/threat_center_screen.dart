@@ -54,8 +54,13 @@ class ThreatCenterScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final s = context.watch<GuardState>();
     final pad = MediaQuery.paddingOf(context);
-    final elevated = s.highRisk >= 3;
-    final levelColor = elevated ? AppColors.orange : AppColors.green;
+    final hasData = s.hasMessages;
+    final elevated = hasData && s.highRisk >= 3;
+    final levelColor = !hasData
+        ? AppColors.muted
+        : elevated
+        ? AppColors.orange
+        : AppColors.green;
     final senders = s.blockedSenders;
 
     return ListView(
@@ -68,8 +73,9 @@ class ThreatCenterScreen extends StatelessWidget {
       children: [
         const ScreenHeader(
           title: 'Threat Center',
-          subtitle: 'What ThreatGuard is stopping',
+          subtitle: 'What ThreatGuard found',
         ),
+        if (s.demoMode) const DemoBanner(),
         GlassCard(
           glow: levelColor,
           padding: const EdgeInsets.all(20),
@@ -90,7 +96,11 @@ class ThreatCenterScreen extends StatelessWidget {
                       style: TextStyle(color: AppColors.muted, fontSize: 13),
                     ),
                     Text(
-                      elevated ? 'Elevated' : 'Low',
+                      !hasData
+                          ? 'No data yet'
+                          : elevated
+                          ? 'Elevated'
+                          : 'Low',
                       style: TextStyle(
                         fontSize: 26,
                         fontWeight: FontWeight.w800,
@@ -98,9 +108,11 @@ class ThreatCenterScreen extends StatelessWidget {
                       ),
                     ),
                     Text(
-                      elevated
-                          ? 'Scam activity targeting you is above normal.'
-                          : 'Scam activity is within the normal range.',
+                      !hasData
+                          ? 'Scan your messages to see your threat level.'
+                          : elevated
+                          ? 'Several high-risk messages were found.'
+                          : 'Few high-risk messages were found.',
                       style: const TextStyle(
                         color: AppColors.muted,
                         fontSize: 13,
@@ -114,6 +126,17 @@ class ThreatCenterScreen extends StatelessWidget {
           ),
         ),
         const SectionHeader('Detection Coverage'),
+        const Padding(
+          padding: EdgeInsets.fromLTRB(4, 0, 4, 10),
+          child: Text(
+            'Categories the detection engine is designed to cover. Detection connects with the backend.',
+            style: TextStyle(
+              color: AppColors.muted,
+              fontSize: 12,
+              height: 1.35,
+            ),
+          ),
+        ),
         GlassCard(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
           child: Column(
@@ -125,78 +148,84 @@ class ThreatCenterScreen extends StatelessWidget {
             ],
           ),
         ),
-        SectionHeader('Blocked Senders  ·  ${senders.length}'),
-        if (senders.isEmpty)
-          const GlassCard(
-            child: Center(
-              child: Text(
-                'No blocked senders yet.',
-                style: TextStyle(color: AppColors.muted),
-              ),
-            ),
-          ),
-        for (final name in senders)
-          Padding(
-            padding: const EdgeInsets.only(bottom: AppSpacing.gap),
-            child: GlassCard(
-              radius: AppRadius.tile,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-              child: ConstrainedBox(
-                // Same row height whether it ends in a pill or "Unblock".
-                constraints: const BoxConstraints(minHeight: 34),
-                child: Row(
-                  children: [
-                    const Icon(
-                      Icons.block_rounded,
-                      size: 20,
-                      color: AppColors.red,
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        name,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w700,
-                          fontSize: 14.5,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    if (s.isManuallyBlocked(name))
-                      InkWell(
-                        borderRadius: BorderRadius.circular(12),
-                        onTap: () {
-                          context.read<GuardState>().unblockSender(name);
-                          showToast(context, '$name unblocked');
-                        },
-                        child: const Padding(
-                          // Padding only enlarges the touch target.
-                          padding: EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 8,
-                          ),
-                          child: Text(
-                            'Unblock',
-                            style: TextStyle(
-                              color: AppColors.primary,
-                              fontWeight: FontWeight.w700,
-                              fontSize: 13,
-                            ),
-                          ),
-                        ),
-                      )
-                    else
-                      const StatusPill(
-                        label: 'Auto-blocked',
-                        color: AppColors.muted,
-                      ),
-                  ],
+        // Only shown when real blocking exists on the device.
+        if (s.blockingAvailable) ...[
+          SectionHeader('Blocked Senders  ·  ${senders.length}'),
+          if (senders.isEmpty)
+            const GlassCard(
+              child: Center(
+                child: Text(
+                  'No blocked senders yet.',
+                  style: TextStyle(color: AppColors.muted),
                 ),
               ),
             ),
-          ),
+          for (final name in senders)
+            Padding(
+              padding: const EdgeInsets.only(bottom: AppSpacing.gap),
+              child: GlassCard(
+                radius: AppRadius.tile,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 10,
+                ),
+                child: ConstrainedBox(
+                  // Same row height whether it ends in a pill or "Unblock".
+                  constraints: const BoxConstraints(minHeight: 34),
+                  child: Row(
+                    children: [
+                      const Icon(
+                        Icons.block_rounded,
+                        size: 20,
+                        color: AppColors.red,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w700,
+                            fontSize: 14.5,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      if (s.isManuallyBlocked(name))
+                        InkWell(
+                          borderRadius: BorderRadius.circular(12),
+                          onTap: () {
+                            context.read<GuardState>().unblockSender(name);
+                            showToast(context, '$name unblocked');
+                          },
+                          child: const Padding(
+                            // Padding only enlarges the touch target.
+                            padding: EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 8,
+                            ),
+                            child: Text(
+                              'Unblock',
+                              style: TextStyle(
+                                color: AppColors.primary,
+                                fontWeight: FontWeight.w700,
+                                fontSize: 13,
+                              ),
+                            ),
+                          ),
+                        )
+                      else
+                        const StatusPill(
+                          label: 'Auto-blocked',
+                          color: AppColors.muted,
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+        ],
       ],
     );
   }

@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../state/guard_state.dart';
 import '../theme/app_theme.dart';
 import '../widgets/charts.dart';
+import '../widgets/threat_activity_chart.dart';
 import '../widgets/common.dart';
 import '../widgets/floating_dock.dart';
 import '../widgets/glass_card.dart';
@@ -23,7 +24,11 @@ class _ReportsScreenState extends State<ReportsScreen> {
   Widget build(BuildContext context) {
     final s = context.watch<GuardState>();
     final pad = MediaQuery.paddingOf(context);
+    final demo = s.demoMode;
 
+    // Real mode: every number comes from the analyzed messages. Time periods
+    // and the activity chart need timestamped history from the backend, so
+    // they exist only as labelled demo data for now.
     final labels = switch (_period) {
       0 => dayHourLabels(),
       1 => s.weekLabels,
@@ -34,18 +39,20 @@ class _ReportsScreenState extends State<ReportsScreen> {
       1 => s.weeklyTrend,
       _ => const [38, 52, 44, 61, 57, 70],
     };
-    final scanned = switch (_period) {
-      0 => s.messagesScanned,
-      1 => 8420,
-      _ => 36150,
-    };
-    final rate = switch (_period) {
-      0 => '99.2%',
-      1 => '99.4%',
-      _ => '99.1%',
-    };
-    final periodName = const ['Today', 'Last 7 days', 'Last 30 days'][_period];
-    final blocked = values.fold<int>(0, (a, b) => a + b);
+    final scanned = !demo
+        ? s.messagesScanned
+        : switch (_period) {
+            0 => s.messagesScanned,
+            1 => 8420,
+            _ => 36150,
+          };
+    final threats = !demo || _period == 0
+        ? s.threatCount
+        : values.fold<int>(0, (a, b) => a + b);
+    final safe = scanned > threats ? scanned - threats : 0;
+    final periodName = !demo
+        ? 'All analyzed messages'
+        : const ['Today', 'Last 7 days', 'Last 30 days'][_period];
     final top = s.categoryCounts.take(4).toList();
     final maxTop = top.isEmpty ? 1 : top.first.value;
 
@@ -61,143 +68,182 @@ class _ReportsScreenState extends State<ReportsScreen> {
           title: 'Reports',
           subtitle: 'Your protection at a glance',
         ),
-        PillTabs(
-          labels: const ['Today', '7 Days', '30 Days'],
-          index: _period,
-          expand: true,
-          onChanged: (i) => setState(() => _period = i),
-        ),
-        const SizedBox(height: 18),
-        GlassCard(
-          glow: AppColors.primary,
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                periodName,
-                style: const TextStyle(color: AppColors.muted, fontSize: 13),
-              ),
-              const SizedBox(height: 6),
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    child: _BigNumber(
-                      value: '$blocked',
-                      label: 'Threats blocked',
-                      color: AppColors.green,
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: _BigNumber(
-                      value: '$scanned',
-                      label: 'Messages scanned',
-                      color: AppColors.primary,
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: _BigNumber(
-                      value: rate,
-                      label: 'Protection rate',
-                      color: AppColors.blue,
-                    ),
-                  ),
-                ],
-              ),
-            ],
+        if (demo) const DemoBanner(),
+        if (demo) ...[
+          PillTabs(
+            labels: const ['Today', '7 Days', '30 Days'],
+            index: _period,
+            expand: true,
+            onChanged: (i) => setState(() => _period = i),
           ),
-        ),
-        const SectionHeader('Threat Activity'),
-        GlassCard(
-          padding: const EdgeInsets.all(18),
-          child: SizedBox(
-            height: 170,
-            child: AnimatedSwitcher(
-              duration: const Duration(milliseconds: 300),
-              child: TrendBars(
-                key: ValueKey(_period),
-                values: values,
-                labels: labels,
-              ),
+          const SizedBox(height: 18),
+        ],
+        if (!s.hasMessages)
+          const EmptyStateCard(
+            icon: Icons.insights_rounded,
+            color: AppColors.muted,
+            title: 'No report data yet',
+            message: 'Reports appear after ThreatGuard has analyzed messages. Nothing has been scanned yet.',
+          )
+        else ...[
+          GlassCard(
+            glow: AppColors.primary,
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  periodName,
+                  style: const TextStyle(color: AppColors.muted, fontSize: 13),
+                ),
+                const SizedBox(height: 6),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: _BigNumber(
+                        value: '$threats',
+                        label: 'Threats found',
+                        color: AppColors.red,
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: _BigNumber(
+                        value: '$scanned',
+                        label: 'Messages scanned',
+                        color: AppColors.primary,
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: _BigNumber(
+                        value: '$safe',
+                        label: 'Safe messages',
+                        color: AppColors.green,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ),
           ),
-        ),
-        const SectionHeader('Top Threat Types'),
-        GlassCard(
-          padding: const EdgeInsets.all(18),
-          child: Column(
-            children: [
-              if (top.isEmpty)
-                const Text(
-                  'Nothing to report yet.',
-                  style: TextStyle(color: AppColors.muted),
-                ),
-              for (final e in top)
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 8),
-                  child: Column(
-                    children: [
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              e.key.label,
-                              style: const TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ),
-                          Text(
-                            '${e.value}',
-                            style: const TextStyle(fontWeight: FontWeight.w800),
-                          ),
-                        ],
+          const SectionHeader('Threat Activity'),
+          GlassCard(
+            padding: const EdgeInsets.all(18),
+            child: demo
+                ? SizedBox(
+                    height: 170,
+                    child: AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 300),
+                      child: ThreatActivityChart(
+                        key: ValueKey(_period),
+                        values: values,
+                        labels: labels,
                       ),
-                      const SizedBox(height: 8),
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(5),
-                        child: Stack(
-                          children: [
-                            Container(height: 7, color: AppColors.white(0.08)),
-                            FractionallySizedBox(
-                              widthFactor: e.value / maxTop,
-                              child: Container(
-                                height: 7,
-                                decoration: const BoxDecoration(
-                                  gradient: AppGradients.aurora,
-                                ),
-                              ),
-                            ),
-                          ],
+                    ),
+                  )
+                : const Row(
+                    children: [
+                      Icon(
+                        Icons.schedule_rounded,
+                        size: 20,
+                        color: AppColors.muted,
+                      ),
+                      SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          'Activity over time needs message history from the backend. It will appear here once that is connected.',
+                          style: TextStyle(
+                            color: AppColors.muted,
+                            fontSize: 13.5,
+                            height: 1.4,
+                          ),
                         ),
                       ),
                     ],
                   ),
-                ),
-            ],
           ),
-        ),
-        const SizedBox(height: 22),
-        GradientButton(
-          label: 'Export report',
-          icon: Icons.ios_share_rounded,
-          onPressed: () async {
-            final text =
-                'ThreatGuard AI report ($periodName)\n'
-                'Threats blocked: $blocked\n'
-                'Messages scanned: $scanned\n'
-                'Protection rate: $rate\n'
-                'Top threats: ${top.map((e) => '${e.key.label} (${e.value})').join(', ')}';
-            await Clipboard.setData(ClipboardData(text: text));
-            if (context.mounted) {
-              showToast(context, 'Report copied to clipboard');
-            }
-          },
-        ),
+          const SectionHeader('Top Threat Types'),
+          GlassCard(
+            padding: const EdgeInsets.all(18),
+            child: Column(
+              children: [
+                if (top.isEmpty)
+                  const Text(
+                    'No threats found in the analyzed messages.',
+                    style: TextStyle(color: AppColors.muted),
+                  ),
+                for (final e in top)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    child: Column(
+                      children: [
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                e.key.label,
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                            Text(
+                              '${e.value}',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(5),
+                          child: Stack(
+                            children: [
+                              Container(
+                                height: 7,
+                                color: AppColors.white(0.08),
+                              ),
+                              FractionallySizedBox(
+                                widthFactor: e.value / maxTop,
+                                child: Container(
+                                  height: 7,
+                                  decoration: const BoxDecoration(
+                                    gradient: AppGradients.aurora,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 22),
+          GradientButton(
+            label: 'Export report',
+            icon: Icons.ios_share_rounded,
+            onPressed: () async {
+              final text =
+                  'ThreatGuard AI report ($periodName)'
+                  '${demo ? ' - DEMO DATA, not from this device' : ''}\n'
+                  'Threats found: $threats\n'
+                  'Messages scanned: $scanned\n'
+                  'Safe messages: $safe\n'
+                  'Top threats: ${top.map((e) => '${e.key.label} (${e.value})').join(', ')}';
+              await Clipboard.setData(ClipboardData(text: text));
+              if (context.mounted) {
+                showToast(context, 'Report copied to clipboard');
+              }
+            },
+          ),
+        ],
       ],
     );
   }

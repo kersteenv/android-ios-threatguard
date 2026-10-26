@@ -1,10 +1,11 @@
 import 'dart:math' as math;
+
 import '../models/inbox_message.dart';
 import '../models/risk_info.dart';
 
 class _Rule {
   _Rule(this.label, String pattern, this.why, {this.cred = false})
-      : re = RegExp(pattern, caseSensitive: false);
+    : re = RegExp(pattern, caseSensitive: false);
   final String label, why;
   final RegExp re;
   final bool cred;
@@ -28,23 +29,45 @@ class ThreatAnalyzer {
       r'within \d+ ?(hours?|minutes?|days?)|expires? (today|soon)|final notice',
       'Uses a deadline to rush you',
     ),
-    _Rule('suspended', r'\b(suspended|locked|deactivated|disabled|closed)\b',
-        'Threatens loss of an account'),
-    _Rule('verify / confirm', r'\b(verify|confirm|validate)\b',
-        'Asks you to confirm details',
-        cred: true),
-    _Rule('password', r'\b(password|passcode)\b', 'Asks for login credentials',
-        cred: true),
-    _Rule('OTP / code', r'\b(otp|one-time (code|password)|security code|pin)\b',
-        'Asks for a one-time code',
-        cred: true),
-    _Rule('login', r'\b(log ?in|sign ?in)\b', 'Pushes you to a login page',
-        cred: true),
-    _Rule('bank / account', r'\b(bank|account|credit card)\b',
-        'Mentions financial or account details'),
-    _Rule('prize / reward',
-        r'\b(winner|you won|prize|lottery|gift card|reward)\b',
-        'Offers an unexpected reward'),
+    _Rule(
+      'suspended',
+      r'\b(suspended|locked|deactivated|disabled|closed)\b',
+      'Threatens loss of an account',
+    ),
+    _Rule(
+      'verify / confirm',
+      r'\b(verify|confirm|validate)\b',
+      'Asks you to confirm details',
+      cred: true,
+    ),
+    _Rule(
+      'password',
+      r'\b(password|passcode)\b',
+      'Asks for login credentials',
+      cred: true,
+    ),
+    _Rule(
+      'OTP / code',
+      r'\b(otp|one-time (code|password)|security code|pin)\b',
+      'Asks for a one-time code',
+      cred: true,
+    ),
+    _Rule(
+      'login',
+      r'\b(log ?in|sign ?in)\b',
+      'Pushes you to a login page',
+      cred: true,
+    ),
+    _Rule(
+      'bank / account',
+      r'\b(bank|account|credit card)\b',
+      'Mentions financial or account details',
+    ),
+    _Rule(
+      'prize / reward',
+      r'\b(winner|you won|prize|lottery|gift card|reward)\b',
+      'Offers an unexpected reward',
+    ),
     _Rule('claim', r'\bclaim\b', 'Asks you to claim something'),
     _Rule('click here', r'click (here|below|the link)', 'Pushes you to click'),
   ];
@@ -55,10 +78,13 @@ class ThreatAnalyzer {
     caseSensitive: false,
   );
   static final _shortRe = RegExp(
-      r'\b(bit\.ly|tinyurl\.com|t\.co|goo\.gl|is\.gd|cutt\.ly)\b',
-      caseSensitive: false);
-  static final _ipRe =
-      RegExp(r'https?:\/\/\d{1,3}(\.\d{1,3}){3}', caseSensitive: false);
+    r'\b(bit\.ly|tinyurl\.com|t\.co|goo\.gl|is\.gd|cutt\.ly)\b',
+    caseSensitive: false,
+  );
+  static final _ipRe = RegExp(
+    r'https?:\/\/\d{1,3}(\.\d{1,3}){3}',
+    caseSensitive: false,
+  );
 
   static ScanResult analyze(String text) {
     final hits = <SignalHit>[];
@@ -73,22 +99,38 @@ class ThreatAnalyzer {
     }
 
     if (_linkRe.hasMatch(text)) {
-      hits.add(const SignalHit(
-          'link', 'Contains a link. Check the real address before clicking'));
+      hits.add(
+        const SignalHit(
+          'link',
+          'Contains a link. Check the real address before clicking',
+        ),
+      );
       score += 20;
       if (_shortRe.hasMatch(text)) {
-        hits.add(const SignalHit(
-            'short link', 'Shortened links hide the real destination'));
+        hits.add(
+          const SignalHit(
+            'short link',
+            'Shortened links hide the real destination',
+          ),
+        );
         score += 15;
       }
       if (_ipRe.hasMatch(text)) {
-        hits.add(const SignalHit('IP address link',
-            'Real services rarely link to a raw IP address'));
+        hits.add(
+          const SignalHit(
+            'IP address link',
+            'Real services rarely link to a raw IP address',
+          ),
+        );
         score += 20;
       }
       if (asksForDetails) {
-        hits.add(const SignalHit('link + login request',
-            'A link combined with a request for details is a classic phishing pattern'));
+        hits.add(
+          const SignalHit(
+            'link + login request',
+            'A link combined with a request for details is a classic phishing pattern',
+          ),
+        );
         score += 15;
       }
     }
@@ -97,8 +139,8 @@ class ThreatAnalyzer {
     final level = score >= 60
         ? RiskLevel.high
         : score >= 25
-            ? RiskLevel.medium
-            : RiskLevel.low;
+        ? RiskLevel.medium
+        : RiskLevel.low;
     return ScanResult(score: score, level: level, hits: hits);
   }
 
@@ -117,7 +159,8 @@ class ThreatAnalyzer {
     collect(_linkRe, true);
 
     ranges.sort(
-        (a, b) => a.start != b.start ? a.start - b.start : b.end - a.end);
+      (a, b) => a.start != b.start ? a.start - b.start : b.end - a.end,
+    );
     final merged = <HighlightRange>[];
     for (final r in ranges) {
       if (merged.isNotEmpty && r.start < merged.last.end) {

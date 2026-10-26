@@ -475,39 +475,44 @@ class PillTabs extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 3),
         child: AnimatedContainer(
-        duration: const Duration(milliseconds: 240),
-        curve: Curves.easeOutCubic,
-        alignment: expand ? Alignment.center : null,
-        padding: EdgeInsets.symmetric(horizontal: expand ? 8 : 18, vertical: 11),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(AppRadius.pill),
-          gradient: active
-              ? LinearGradient(
-                  colors: [
-                    AppColors.primary.withAlpha(70),
-                    AppColors.blue.withAlpha(60),
-                  ],
-                )
-              : null,
-          color: active ? null : AppColors.white(0.07),
-          border: Border.all(
-            color: active
-                ? AppColors.primary.withAlpha(150)
-                : AppColors.white(0.12),
+          duration: const Duration(milliseconds: 240),
+          curve: Curves.easeOutCubic,
+          alignment: expand ? Alignment.center : null,
+          padding: EdgeInsets.symmetric(
+            horizontal: expand ? 8 : 18,
+            vertical: 11,
           ),
-          boxShadow: active
-              ? [
-                  BoxShadow(
-                    color: AppColors.primary.withAlpha(80),
-                    blurRadius: 20,
-                    spreadRadius: -4,
-                  ),
-                ]
-              : const [],
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(AppRadius.pill),
+            gradient: active
+                ? LinearGradient(
+                    colors: [
+                      AppColors.primary.withAlpha(70),
+                      AppColors.blue.withAlpha(60),
+                    ],
+                  )
+                : null,
+            color: active ? null : AppColors.white(0.07),
+            border: Border.all(
+              color: active
+                  ? AppColors.primary.withAlpha(150)
+                  : AppColors.white(0.12),
+            ),
+            boxShadow: active
+                ? [
+                    BoxShadow(
+                      color: AppColors.primary.withAlpha(80),
+                      blurRadius: 20,
+                      spreadRadius: -4,
+                    ),
+                  ]
+                : const [],
+          ),
+          // Equal-width tabs shrink their text instead of wrapping mid-word.
+          child: expand
+              ? FittedBox(fit: BoxFit.scaleDown, child: label)
+              : label,
         ),
-        // Equal-width tabs shrink their text instead of wrapping mid-word.
-        child: expand ? FittedBox(fit: BoxFit.scaleDown, child: label) : label,
-      ),
       ),
     );
   }
@@ -559,6 +564,93 @@ class EqualRow extends StatelessWidget {
             Expanded(child: children[i]),
           ],
         ],
+      ),
+    );
+  }
+}
+
+/// Shown wherever sample data is on screen, so it is never mistaken for
+/// information from the user's device.
+class DemoBanner extends StatelessWidget {
+  const DemoBanner({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: AppSpacing.gap),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: AppColors.orange.withAlpha(30),
+        borderRadius: BorderRadius.circular(AppRadius.tile),
+        border: Border.all(color: AppColors.orange.withAlpha(90)),
+      ),
+      child: const Row(
+        children: [
+          Icon(Icons.science_rounded, size: 18, color: AppColors.orange),
+          SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              'Demo mode · sample messages, not from your device',
+              style: TextStyle(
+                fontSize: 12.5,
+                height: 1.3,
+                fontWeight: FontWeight.w600,
+                color: AppColors.orange,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Glass card for "nothing here yet" and "permission needed" situations.
+class EmptyStateCard extends StatelessWidget {
+  const EmptyStateCard({
+    super.key,
+    required this.icon,
+    required this.title,
+    required this.message,
+    this.color = AppColors.primary,
+    this.actions = const [],
+  });
+  final IconData icon;
+  final String title, message;
+  final Color color;
+  final List<Widget> actions;
+
+  @override
+  Widget build(BuildContext context) {
+    return GlassCard(
+      padding: const EdgeInsets.all(22),
+      child: SizedBox(
+        width: double.infinity,
+        child: Column(
+          children: [
+            ThreatIcon(icon: icon, color: color, size: 56),
+            const SizedBox(height: 14),
+            Text(
+              title,
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              message,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                color: AppColors.muted,
+                fontSize: 13.5,
+                height: 1.4,
+              ),
+            ),
+            for (var i = 0; i < actions.length; i++) ...[
+              SizedBox(height: i == 0 ? 18 : 10),
+              SizedBox(width: double.infinity, child: actions[i]),
+            ],
+          ],
+        ),
       ),
     );
   }

@@ -6,8 +6,11 @@ class SignalHit {
 }
 
 class ScanResult {
-  const ScanResult(
-      {required this.score, required this.level, required this.hits});
+  const ScanResult({
+    required this.score,
+    required this.level,
+    required this.hits,
+  });
   final int score;
   final RiskLevel level;
   final List<SignalHit> hits;
@@ -27,10 +30,9 @@ class InboxMessage {
   final String sender, channel, body, time;
   final ScanResult result;
 
-  String get threatType =>
-      result.level == RiskLevel.high && channel == 'SMS'
-          ? 'Smishing'
-          : result.level.info.dash;
+  String get threatType => result.level == RiskLevel.high && channel == 'SMS'
+      ? 'Smishing'
+      : result.level.info.dash;
 
   String get excerpt {
     final flat = body.replaceAll(RegExp(r'\s+'), ' ').trim();

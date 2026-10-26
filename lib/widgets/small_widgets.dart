@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../models/risk_info.dart';
 
 class RiskPill extends StatelessWidget {
@@ -55,12 +56,17 @@ class UserAvatar extends StatelessWidget {
         shape: BoxShape.circle,
         color: _colors[hash % _colors.length],
         border: Border.all(
-            color: const Color.fromRGBO(255, 255, 255, 0.25), width: 3),
+          color: const Color.fromRGBO(255, 255, 255, 0.25),
+          width: 3,
+        ),
       ),
       child: Text(
         name.isEmpty ? '?' : name.substring(0, 1).toUpperCase(),
         style: const TextStyle(
-            fontSize: 18, fontWeight: FontWeight.w700, color: Colors.white),
+          fontSize: 18,
+          fontWeight: FontWeight.w700,
+          color: Colors.white,
+        ),
       ),
     );
   }

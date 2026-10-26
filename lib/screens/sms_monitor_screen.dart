@@ -45,7 +45,6 @@ class _SmsMonitorScreenState extends State<SmsMonitorScreen> {
     final s = context.watch<GuardState>();
     final pad = MediaQuery.paddingOf(context);
     final list = _apply(s.messages);
-    final safeCount = s.messages.where((m) => !m.isThreat).length;
 
     return RefreshIndicator(
       color: AppColors.primary,
@@ -63,96 +62,160 @@ class _SmsMonitorScreenState extends State<SmsMonitorScreen> {
         children: [
           ScreenHeader(
             title: 'SMS Monitor',
-            subtitle: 'Autonomous AI protection',
+            subtitle: 'SMS threat analysis',
             trailing: StatusPill(
-              label: s.monitoring ? 'LIVE' : 'PAUSED',
-              color: s.monitoring ? AppColors.green : AppColors.orange,
+              label: s.status.shortLabel,
+              color: s.status.color,
               dot: true,
             ),
           ),
+          if (s.demoMode) const DemoBanner(),
           GlassCard(
             padding: const EdgeInsets.symmetric(vertical: 16),
             child: Row(
               children: [
                 _Stat(value: s.messagesScanned, label: 'Scanned'),
                 _Stat(
-                  value: s.blockedToday,
-                  label: 'Blocked',
+                  value: s.threatCount,
+                  label: 'Threats',
                   color: AppColors.red,
                 ),
-                _Stat(value: safeCount, label: 'Safe', color: AppColors.green),
+                _Stat(
+                  value: s.safeCount,
+                  label: 'Safe',
+                  color: AppColors.green,
+                ),
+                // Only shown when real blocking exists on the device.
+                if (s.blockingAvailable)
+                  _Stat(
+                    value: s.blockedSenders.length,
+                    label: 'Blocked',
+                    color: AppColors.orange,
+                  ),
               ],
             ),
           ),
           const SizedBox(height: AppSpacing.gapLg),
-          Row(
-            children: [
-              Expanded(
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 14),
-                  decoration: BoxDecoration(
-                    color: AppColors.white(0.07),
-                    borderRadius: BorderRadius.circular(AppRadius.pill),
-                    border: Border.all(color: AppColors.white(0.12)),
-                  ),
-                  child: TextField(
-                    onChanged: (v) => setState(() => _query = v),
-                    textInputAction: TextInputAction.search,
-                    autocorrect: false,
-                    onTapOutside: (_) =>
-                        FocusManager.instance.primaryFocus?.unfocus(),
-                    style: const TextStyle(fontSize: 15),
-                    cursorColor: AppColors.primary,
-                    decoration: const InputDecoration(
-                      border: InputBorder.none,
-                      isDense: true,
-                      hintText: 'Search messages',
-                      hintStyle: TextStyle(color: AppColors.muted),
-                      prefixIcon: Icon(
-                        Icons.search_rounded,
-                        color: AppColors.muted,
+          if (!s.hasMessages)
+            _SmsEmptyState(state: s)
+          else ...[
+            Row(
+              children: [
+                Expanded(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 14),
+                    decoration: BoxDecoration(
+                      color: AppColors.white(0.07),
+                      borderRadius: BorderRadius.circular(AppRadius.pill),
+                      border: Border.all(color: AppColors.white(0.12)),
+                    ),
+                    child: TextField(
+                      onChanged: (v) => setState(() => _query = v),
+                      textInputAction: TextInputAction.search,
+                      autocorrect: false,
+                      onTapOutside: (_) =>
+                          FocusManager.instance.primaryFocus?.unfocus(),
+                      style: const TextStyle(fontSize: 15),
+                      cursorColor: AppColors.primary,
+                      decoration: const InputDecoration(
+                        border: InputBorder.none,
+                        isDense: true,
+                        hintText: 'Search messages',
+                        hintStyle: TextStyle(color: AppColors.muted),
+                        prefixIcon: Icon(
+                          Icons.search_rounded,
+                          color: AppColors.muted,
+                        ),
+                        contentPadding: EdgeInsets.symmetric(vertical: 14),
                       ),
-                      contentPadding: EdgeInsets.symmetric(vertical: 14),
                     ),
                   ),
                 ),
-              ),
-              const SizedBox(width: 10),
-              // Scan now lives beside the search field so it never covers
-              // message cards or the dock.
-              _ScanButton(onTap: () => showScanSheet(context)),
-            ],
-          ),
-          const SizedBox(height: 14),
-          PillTabs(
-            labels: _filters,
-            index: _filter,
-            expand: true,
-            onChanged: (i) => setState(() => _filter = i),
-          ),
-          const SizedBox(height: 14),
-          if (list.isEmpty)
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 40),
-              child: Center(
-                child: Text(
-                  'No messages match.',
-                  style: TextStyle(color: AppColors.muted),
+                const SizedBox(width: 10),
+                _ScanButton(onTap: () => showScanSheet(context)),
+              ],
+            ),
+            const SizedBox(height: 14),
+            PillTabs(
+              labels: _filters,
+              index: _filter,
+              expand: true,
+              onChanged: (i) => setState(() => _filter = i),
+            ),
+            const SizedBox(height: 14),
+            if (list.isEmpty)
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 40),
+                child: Center(
+                  child: Text(
+                    'No messages match.',
+                    style: TextStyle(color: AppColors.muted),
+                  ),
                 ),
               ),
-            ),
-          for (final m in list)
-            Padding(
-              padding: const EdgeInsets.only(bottom: AppSpacing.gap),
-              child: _SmsCard(
-                key: ValueKey(m.id),
-                message: m,
-                blocked: s.isBlocked(m.sender),
+            for (final m in list)
+              Padding(
+                padding: const EdgeInsets.only(bottom: AppSpacing.gap),
+                child: _SmsCard(
+                  key: ValueKey(m.id),
+                  message: m,
+                  blocked: s.isBlocked(m.sender),
+                ),
               ),
-            ),
+          ],
         ],
       ),
     );
+  }
+}
+
+/// What the Monitor shows instead of a message list when there is no data.
+class _SmsEmptyState extends StatelessWidget {
+  const _SmsEmptyState({required this.state});
+  final GuardState state;
+
+  @override
+  Widget build(BuildContext context) {
+    final demoButton = GhostButton(
+      label: 'Load demo messages',
+      icon: Icons.science_rounded,
+      onPressed: () => state.setDemoMode(true),
+    );
+    return switch (state.smsPermission) {
+      SmsPermission.unsupported => const EmptyStateCard(
+        icon: Icons.block_rounded,
+        color: AppColors.muted,
+        title: 'Not supported',
+        message: 'SMS scanning is not available on this device or platform.',
+      ),
+      SmsPermission.notGranted => EmptyStateCard(
+        icon: Icons.sms_failed_rounded,
+        color: AppColors.orange,
+        title: 'SMS access required',
+        message: 'ThreatGuard needs permission to read your messages before it can analyze them. No messages have been scanned.',
+        actions: [
+          GradientButton(
+            label: 'Allow SMS access',
+            icon: Icons.sms_rounded,
+            onPressed: () => requestSmsAccess(context),
+          ),
+          demoButton,
+        ],
+      ),
+      SmsPermission.granted => EmptyStateCard(
+        icon: Icons.mark_email_unread_rounded,
+        title: 'No messages scanned yet',
+        message: 'Run a scan to analyze the messages on this device.',
+        actions: [
+          GradientButton(
+            label: 'Scan now',
+            icon: Icons.radar_rounded,
+            onPressed: () => showScanSheet(context),
+          ),
+          demoButton,
+        ],
+      ),
+    };
   }
 }
 

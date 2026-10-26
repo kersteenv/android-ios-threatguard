@@ -36,23 +36,24 @@ class DashboardScreen extends StatelessWidget {
         ),
         children: [
           _TopBar(state: s),
+          if (s.demoMode) ...[const SizedBox(height: 12), const DemoBanner()],
           const SizedBox(height: 4),
           Center(child: ShieldHero(size: heroSize)),
           _HeroText(state: s),
-          const SectionHeader('Today'),
+          const SectionHeader('Scan Results'),
           EqualRow(
             children: [
-              _MetricCard(
-                icon: Icons.block_rounded,
-                color: AppColors.green,
-                value: s.blockedToday,
-                label: 'Threats Blocked Today',
-              ),
               _MetricCard(
                 icon: Icons.mark_email_read_rounded,
                 color: AppColors.primary,
                 value: s.messagesScanned,
                 label: 'Messages Scanned',
+              ),
+              _MetricCard(
+                icon: Icons.warning_amber_rounded,
+                color: AppColors.red,
+                value: s.threatCount,
+                label: 'Threats Found',
               ),
             ],
           ),
@@ -66,10 +67,10 @@ class DashboardScreen extends StatelessWidget {
                 label: 'High Risk Messages',
               ),
               _MetricCard(
-                icon: Icons.person_off_rounded,
-                color: AppColors.violet,
-                value: s.blockedSenderCount,
-                label: 'Blocked Senders',
+                icon: Icons.verified_user_rounded,
+                color: AppColors.green,
+                value: s.safeCount,
+                label: 'Safe Messages',
               ),
             ],
           ),
@@ -126,7 +127,7 @@ class _TopBar extends StatelessWidget {
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
               ),
               Text(
-                'Always watching over you',
+                'SMS threat protection',
                 style: TextStyle(fontSize: 12, color: AppColors.muted),
               ),
             ],
@@ -148,48 +149,58 @@ class _HeroText extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final on = state.monitoring;
-    final gradient = on
-        ? AppGradients.safe
-        : const LinearGradient(colors: [AppColors.orange, Color(0xFFFFD58A)]);
+    final status = state.status;
+    final score = state.protectionScore;
     return Column(
       children: [
         ShaderMask(
-          shaderCallback: (r) => gradient.createShader(r),
-          child: Text(
-            on ? 'PROTECTED' : 'PAUSED',
-            style: const TextStyle(
-              fontSize: 34,
-              fontWeight: FontWeight.w800,
-              letterSpacing: 3,
-              color: Colors.white,
+          shaderCallback: (r) => status.gradient.createShader(r),
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              status.label.toUpperCase(),
+              maxLines: 1,
+              style: const TextStyle(
+                fontSize: 34,
+                fontWeight: FontWeight.w800,
+                letterSpacing: 3,
+                color: Colors.white,
+              ),
             ),
           ),
         ),
         const SizedBox(height: 10),
-        const Text(
-          'Your AI shield against phishing,\nsocial engineering,\nand SMS scams.',
+        Text(
+          status.description,
           textAlign: TextAlign.center,
-          style: TextStyle(color: AppColors.muted, fontSize: 15, height: 1.45),
+          style: const TextStyle(
+            color: AppColors.muted,
+            fontSize: 15,
+            height: 1.45,
+          ),
         ),
         const SizedBox(height: 16),
         EqualRow(
           gap: 10,
           children: [
             _HeroStat(
-              value: '${state.protectionScore}%',
+              value: score == null ? '—' : '$score%',
               label: 'Protection Score',
-              color: AppColors.green,
+              color: score == null ? AppColors.muted : AppColors.green,
             ),
             _HeroStat(
-              value: on ? 'ONLINE' : 'STANDBY',
+              value: state.engineConnected ? 'ONLINE' : 'PENDING',
               label: 'AI Engine',
-              color: AppColors.primary,
+              color: state.engineConnected
+                  ? AppColors.primary
+                  : AppColors.muted,
             ),
             _HeroStat(
-              value: on ? 'ACTIVE' : 'OFF',
+              value: state.monitoringRunning ? 'ACTIVE' : 'INACTIVE',
               label: 'SMS Monitoring',
-              color: on ? AppColors.green : AppColors.orange,
+              color: state.monitoringRunning
+                  ? AppColors.green
+                  : AppColors.muted,
             ),
           ],
         ),
