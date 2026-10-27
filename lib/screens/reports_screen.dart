@@ -5,7 +5,6 @@ import 'package:provider/provider.dart';
 import '../state/guard_state.dart';
 import '../theme/app_theme.dart';
 import '../widgets/charts.dart';
-import '../widgets/threat_activity_chart.dart';
 import '../widgets/common.dart';
 import '../widgets/floating_dock.dart';
 import '../widgets/glass_card.dart';
@@ -83,7 +82,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
             icon: Icons.insights_rounded,
             color: AppColors.muted,
             title: 'No report data yet',
-            message: 'Reports appear after ThreatGuard has analyzed messages. Nothing has been scanned yet.',
+            message:
+                'Reports appear after ThreatGuard has analyzed messages. Nothing has been scanned yet.',
           )
         else ...[
           GlassCard(
@@ -136,7 +136,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                     height: 170,
                     child: AnimatedSwitcher(
                       duration: const Duration(milliseconds: 300),
-                      child: ThreatActivityChart(
+                      child: TrendBars(
                         key: ValueKey(_period),
                         values: values,
                         labels: labels,

@@ -80,11 +80,7 @@ class _SmsMonitorScreenState extends State<SmsMonitorScreen> {
                   label: 'Threats',
                   color: AppColors.red,
                 ),
-                _Stat(
-                  value: s.safeCount,
-                  label: 'Safe',
-                  color: AppColors.green,
-                ),
+                _Stat(value: s.safeCount, label: 'Safe', color: AppColors.green),
                 // Only shown when real blocking exists on the device.
                 if (s.blockingAvailable)
                   _Stat(
@@ -192,7 +188,8 @@ class _SmsEmptyState extends StatelessWidget {
         icon: Icons.sms_failed_rounded,
         color: AppColors.orange,
         title: 'SMS access required',
-        message: 'ThreatGuard needs permission to read your messages before it can analyze them. No messages have been scanned.',
+        message:
+            'ThreatGuard needs permission to read your messages before it can analyze them. No messages have been scanned.',
         actions: [
           GradientButton(
             label: 'Allow SMS access',

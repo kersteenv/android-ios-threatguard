@@ -36,7 +36,10 @@ class DashboardScreen extends StatelessWidget {
         ),
         children: [
           _TopBar(state: s),
-          if (s.demoMode) ...[const SizedBox(height: 12), const DemoBanner()],
+          if (s.demoMode) ...[
+            const SizedBox(height: 12),
+            const DemoBanner(),
+          ],
           const SizedBox(height: 4),
           Center(child: ShieldHero(size: heroSize)),
           _HeroText(state: s),
@@ -191,9 +194,7 @@ class _HeroText extends StatelessWidget {
             _HeroStat(
               value: state.engineConnected ? 'ONLINE' : 'PENDING',
               label: 'AI Engine',
-              color: state.engineConnected
-                  ? AppColors.primary
-                  : AppColors.muted,
+              color: state.engineConnected ? AppColors.primary : AppColors.muted,
             ),
             _HeroStat(
               value: state.monitoringRunning ? 'ACTIVE' : 'INACTIVE',

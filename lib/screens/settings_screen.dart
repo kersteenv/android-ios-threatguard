@@ -138,11 +138,7 @@ class SettingsScreen extends StatelessWidget {
           padding: EdgeInsets.fromLTRB(4, 10, 4, 0),
           child: Text(
             'These are your preferences. The features behind them connect with the backend.',
-            style: TextStyle(
-              color: AppColors.muted,
-              fontSize: 12,
-              height: 1.35,
-            ),
+            style: TextStyle(color: AppColors.muted, fontSize: 12, height: 1.35),
           ),
         ),
         const SectionHeader('Detection Sensitivity'),

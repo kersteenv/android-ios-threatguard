@@ -130,11 +130,7 @@ class ThreatCenterScreen extends StatelessWidget {
           padding: EdgeInsets.fromLTRB(4, 0, 4, 10),
           child: Text(
             'Categories the detection engine is designed to cover. Detection connects with the backend.',
-            style: TextStyle(
-              color: AppColors.muted,
-              fontSize: 12,
-              height: 1.35,
-            ),
+            style: TextStyle(color: AppColors.muted, fontSize: 12, height: 1.35),
           ),
         ),
         GlassCard(
@@ -165,10 +161,7 @@ class ThreatCenterScreen extends StatelessWidget {
               padding: const EdgeInsets.only(bottom: AppSpacing.gap),
               child: GlassCard(
                 radius: AppRadius.tile,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 10,
-                ),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                 child: ConstrainedBox(
                   // Same row height whether it ends in a pill or "Unblock".
                   constraints: const BoxConstraints(minHeight: 34),

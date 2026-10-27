@@ -475,44 +475,39 @@ class PillTabs extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 3),
         child: AnimatedContainer(
-          duration: const Duration(milliseconds: 240),
-          curve: Curves.easeOutCubic,
-          alignment: expand ? Alignment.center : null,
-          padding: EdgeInsets.symmetric(
-            horizontal: expand ? 8 : 18,
-            vertical: 11,
+        duration: const Duration(milliseconds: 240),
+        curve: Curves.easeOutCubic,
+        alignment: expand ? Alignment.center : null,
+        padding: EdgeInsets.symmetric(horizontal: expand ? 8 : 18, vertical: 11),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(AppRadius.pill),
+          gradient: active
+              ? LinearGradient(
+                  colors: [
+                    AppColors.primary.withAlpha(70),
+                    AppColors.blue.withAlpha(60),
+                  ],
+                )
+              : null,
+          color: active ? null : AppColors.white(0.07),
+          border: Border.all(
+            color: active
+                ? AppColors.primary.withAlpha(150)
+                : AppColors.white(0.12),
           ),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(AppRadius.pill),
-            gradient: active
-                ? LinearGradient(
-                    colors: [
-                      AppColors.primary.withAlpha(70),
-                      AppColors.blue.withAlpha(60),
-                    ],
-                  )
-                : null,
-            color: active ? null : AppColors.white(0.07),
-            border: Border.all(
-              color: active
-                  ? AppColors.primary.withAlpha(150)
-                  : AppColors.white(0.12),
-            ),
-            boxShadow: active
-                ? [
-                    BoxShadow(
-                      color: AppColors.primary.withAlpha(80),
-                      blurRadius: 20,
-                      spreadRadius: -4,
-                    ),
-                  ]
-                : const [],
-          ),
-          // Equal-width tabs shrink their text instead of wrapping mid-word.
-          child: expand
-              ? FittedBox(fit: BoxFit.scaleDown, child: label)
-              : label,
+          boxShadow: active
+              ? [
+                  BoxShadow(
+                    color: AppColors.primary.withAlpha(80),
+                    blurRadius: 20,
+                    spreadRadius: -4,
+                  ),
+                ]
+              : const [],
         ),
+        // Equal-width tabs shrink their text instead of wrapping mid-word.
+        child: expand ? FittedBox(fit: BoxFit.scaleDown, child: label) : label,
+      ),
       ),
     );
   }

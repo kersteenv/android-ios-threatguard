@@ -205,7 +205,9 @@ List<_Check> _checks(GuardState s) {
     _Check(
       Icons.sensors_rounded,
       'Real-time monitoring',
-      s.monitoringRunning ? 'Monitoring active' : 'Not running · needs backend',
+      s.monitoringRunning
+          ? 'Monitoring active'
+          : 'Not running · needs backend',
       s.monitoringRunning ? _CheckState.ok : _CheckState.pending,
     ),
     _Check(
@@ -360,7 +362,8 @@ class _ScanSheetState extends State<_ScanSheet> {
         icon: Icons.science_rounded,
         color: AppColors.orange,
         title: 'Demo mode',
-        message: 'Sample messages are shown, so there is nothing to scan. Turn off demo mode in Settings to use your real messages.',
+        message:
+            'Sample messages are shown, so there is nothing to scan. Turn off demo mode in Settings to use your real messages.',
         actions: [GhostButton(label: 'Close', onPressed: close)],
       );
     }
@@ -378,7 +381,8 @@ class _ScanSheetState extends State<_ScanSheet> {
           icon: Icons.sms_failed_rounded,
           color: AppColors.orange,
           title: 'SMS access required',
-          message: 'ThreatGuard needs permission to read your messages before it can scan them.',
+          message:
+              'ThreatGuard needs permission to read your messages before it can scan them.',
           actions: [
             GradientButton(
               label: 'Allow SMS access',
@@ -396,7 +400,8 @@ class _ScanSheetState extends State<_ScanSheet> {
         icon: Icons.hourglass_empty_rounded,
         color: AppColors.primary,
         title: 'Scanning is not connected yet',
-        message: 'SMS access is granted. Message analysis becomes available once the backend is integrated.',
+        message:
+            'SMS access is granted. Message analysis becomes available once the backend is integrated.',
         actions: [GhostButton(label: 'Close', onPressed: close)],
       );
     }
